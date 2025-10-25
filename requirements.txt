@@ -1,0 +1,36 @@
+# PrivAds: Privacy-First AI Advertising Platform
+# Python Dependencies
+
+# Core ML/DL
+torch>=2.0.0
+numpy>=1.24.0
+sentence-transformers>=2.2.0
+
+# Data Processing
+pandas>=2.0.0
+scikit-learn>=1.3.0
+
+# Training & Monitoring
+tqdm>=4.65.0
+wandb>=0.15.0  # Optional: for experiment tracking
+
+# Serving & API
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+
+# Vector Search
+faiss-cpu>=1.7.4  # Use faiss-gpu for GPU support
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Development
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Optional: Privacy-Preserving ML
+opacus>=1.4.0  # Differential privacy for PyTorch

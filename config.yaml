@@ -1,0 +1,122 @@
+# PrivAds Configuration File
+
+# Model Architecture
+model:
+  ad_encoder:
+    name: "all-MiniLM-L6-v2"  # sentence-transformers model
+    freeze: true  # Freeze during training
+    embedding_dim: 384
+  
+  user_embedding:
+    dimension: 256
+    init_std: 0.01  # Initialization standard deviation
+  
+  projector:
+    type: "mlp"  # Options: "linear", "mlp"
+    hidden_dim: 192  # For MLP only
+    dropout: 0.1
+
+# Training
+training:
+  epochs: 20
+  batch_size: 64
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  gradient_clip: 1.0
+  
+  # Loss weights
+  click_loss_weight: 1.0
+  triplet_loss_weight: 0.5
+  
+  # Optimizer
+  optimizer: "adam"  # Options: "adam", "adamw", "sgd"
+  scheduler: "cosine"  # Options: "none", "cosine", "step"
+  
+  # Early stopping
+  patience: 5
+  min_delta: 0.001
+
+# Triplet Mining
+triplet_mining:
+  enabled: true
+  probability: 0.5  # Probability of adding triplets to each sample
+  
+  positive_strategy: "co-click"  # Options: "co-click", "high-overlap"
+  negative_strategy: "hard"  # Options: "random", "hard", "semi-hard"
+  
+  margin: 0.5
+  temperature: 0.07  # For NT-Xent loss
+
+# Data
+data:
+  train_path: "data/train_clicks.csv"
+  test_path: "data/test_clicks.csv"
+  val_split: 0.2
+  
+  # Data augmentation
+  augmentation:
+    enabled: false
+    synonym_replacement: 0.1
+    random_deletion: 0.1
+
+# Evaluation
+evaluation:
+  metrics:
+    - accuracy
+    - precision_at_k
+    - recall_at_k
+    - ndcg_at_k
+    - mrr
+  
+  k_values: [5, 10, 20]
+  
+  # Cold start evaluation
+  cold_start:
+    enabled: true
+    test_path: "data/cold_start_test.csv"
+
+# Inference
+inference:
+  batch_size: 256
+  device: "cuda"  # Options: "cuda", "cpu"
+  
+  # Vector search
+  vector_db:
+    type: "faiss"  # Options: "faiss", "milvus", "qdrant"
+    index_type: "IVF"  # Faiss index type
+    nprobe: 32  # Number of clusters to search
+
+# Privacy
+privacy:
+  differential_privacy:
+    enabled: false
+    epsilon: 1.0
+    delta: 1e-5
+    max_grad_norm: 1.0
+  
+  # Embedding protection
+  noise_multiplier: 0.0
+  embedding_rotation:
+    enabled: false
+    rotation_epochs: 10
+
+# Logging & Monitoring
+logging:
+  wandb:
+    enabled: false
+    project: "privads"
+    entity: "your-entity"
+  
+  tensorboard:
+    enabled: true
+    log_dir: "runs/"
+  
+  checkpoint_freq: 5  # Save checkpoint every N epochs
+  print_freq: 10  # Print metrics every N batches
+
+# Paths
+paths:
+  data_dir: "data/"
+  checkpoint_dir: "checkpoints/"
+  log_dir: "logs/"
+  cache_dir: ".cache/"
