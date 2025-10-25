@@ -50,10 +50,12 @@ python main.py
 This will:
 1. Download Jina CLIP v2 (~800MB, one-time)
 2. Encode sample ads
-3. Generate 10K synthetic clicks
+3. Generate 10K synthetic clicks (80% train, 20% test)
 4. Train user embeddings (50 epochs)
 5. Train projector (30 epochs)
-6. Save everything to `models/` and `data/`
+6. Precompute projected ad embeddings
+7. **Evaluate performance with Precision@10, t-SNE plots, and heatmaps**
+8. Save everything to `models/`, `data/`, and `evaluation_results/`
 
 ### Option 3: Individual Components
 ```bash

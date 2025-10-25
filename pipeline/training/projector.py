@@ -6,8 +6,7 @@ import torch.nn as nn
 
 class Projector(nn.Module):
     """MLP projector from ad space (d_ad) to user space (d_user)."""
-    
-    def __init__(self, d_ad: int = 768, d_user: int = 128, hidden_dim: int = 512):
+    def __init__(self, d_ad: int, d_user: int = 128, hidden_dim: int = 512):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(d_ad, hidden_dim),
@@ -17,14 +16,8 @@ class Projector(nn.Module):
             nn.Linear(hidden_dim, d_user),
             nn.LayerNorm(d_user)
         )
-    
+
     def forward(self, z_ad: torch.Tensor) -> torch.Tensor:
-        """
-        Args:
-            z_ad: (batch, d_ad) ad embeddings
-        Returns:
-            p_ad: (batch, d_user) projected embeddings (L2 normalized)
-        """
         p = self.net(z_ad)
         return p / p.norm(dim=-1, keepdim=True)
 

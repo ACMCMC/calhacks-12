@@ -135,7 +135,7 @@ if __name__ == "__main__":
     clicks = gen.get_clicks(5000)
     
     # Train user embeddings
-    user_emb, _ = train_user_embeddings(clicks, n_users=100, d_user=128, epochs=20, device="cpu")
+    user_emb, _, _ = train_user_embeddings(clicks, n_users=100, d_user=128, epochs=20, device="cpu")
     
     # Create fake ad embeddings (in real system, these come from AdEncoder)
     ad_emb_raw = {aid: np.random.randn(768) for aid in range(50)}

@@ -65,8 +65,8 @@ class AdEncoder:
                 padding=True
             ).to(self.device)
             
-            # Get unified embedding
-            embedding = self.model(**inputs).pooler_output
+            # Get unified embedding - use image features for multimodal
+            embedding = self.model.get_image_features(**inputs)
         else:
             # Text only
             inputs = self.processor(

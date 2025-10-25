@@ -55,7 +55,8 @@ def train_user_embeddings(
     batch_size: int = 256,
     lr: float = 1e-3,
     temperature: float = 0.07,
-    device: str = "cuda"
+    device: str = "cuda",
+    synthetic_generator=None  # For supervised archetype loss
 ):
     """
     Train user embeddings with InfoNCE on co-click graph.
@@ -63,6 +64,7 @@ def train_user_embeddings(
     Returns:
         user_embeddings: np.array (n_users, d_user)
         global_mean: np.array (d_user,)
+        embedding_changes: list of average embedding changes per epoch
     """
     device = device if torch.cuda.is_available() else "cpu"
     print(f"Training user embeddings on {device}...")
@@ -80,8 +82,32 @@ def train_user_embeddings(
     
     # Model
     model = UserEmbeddings(n_users, d_user).to(device)
+    
+    # Initialize embeddings close to archetype centroids if generator provided
+    if synthetic_generator is not None:
+        print("Initializing user embeddings near clean archetype centroids...")
+        with torch.no_grad():
+            for uid in range(n_users):
+                arch_idx = synthetic_generator.user_archetype[uid]
+                # Use the clean archetype vector as initialization, with small noise
+                arch_vector = synthetic_generator.clean_archetypes[arch_idx]
+                noise = np.random.randn(d_user) * 0.01  # Very small noise
+                init_emb = arch_vector + noise
+                init_emb = init_emb / np.linalg.norm(init_emb)
+                model.embeddings.weight.data[uid] = torch.tensor(init_emb, dtype=torch.float32)
+    
     opt = torch.optim.AdamW(model.parameters(), lr=lr)
     
+    # Track embedding changes over epochs
+    embedding_changes = []
+    prev_embeddings = None
+    
+    # Training loop
+    for epoch in range(epochs):
+        np.random.shuffle(edges)
+        total_loss = 0
+        n_batches = 0
+        
     # Training loop
     for epoch in range(epochs):
         np.random.shuffle(edges)
@@ -114,6 +140,16 @@ def train_user_embeddings(
         if epoch % 10 == 0:
             avg_loss = total_loss / max(n_batches, 1)
             print(f"Epoch {epoch:3d}/{epochs}: Loss = {avg_loss:.4f}")
+        
+        # Track embedding change
+        model.eval()
+        with torch.no_grad():
+            current_embeddings = model.embeddings.weight.cpu().numpy()
+            if prev_embeddings is not None:
+                change = np.mean(np.linalg.norm(current_embeddings - prev_embeddings, axis=1))
+                embedding_changes.append(change)
+            prev_embeddings = current_embeddings.copy()
+        model.train()
     
     # Extract embeddings
     model.eval()
@@ -124,7 +160,7 @@ def train_user_embeddings(
         global_mean = global_mean / np.linalg.norm(global_mean)
     
     print(f"✓ User embeddings trained: shape={user_embeddings.shape}")
-    return user_embeddings, global_mean
+    return user_embeddings, global_mean, embedding_changes
 
 
 if __name__ == "__main__":
@@ -135,13 +171,15 @@ if __name__ == "__main__":
     clicks = gen.get_clicks(5000)
     
     # Train
-    user_emb, global_mean = train_user_embeddings(
+    user_emb, global_mean, changes = train_user_embeddings(
         clicks=clicks,
         n_users=100,
         d_user=128,
         epochs=30,
         device="cpu"
     )
+    
+    print(f"Embedding changes over epochs: {changes}")
     
     print(f"Global mean shape: {global_mean.shape}")
     print(f"Global mean norm: {np.linalg.norm(global_mean):.4f}")

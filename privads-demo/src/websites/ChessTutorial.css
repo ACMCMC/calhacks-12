@@ -1,0 +1,422 @@
+.chess-tutorial {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 50%, #c2410c 100%);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.site-header {
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  padding: 40px 20px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.site-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="60" cy="30" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+  opacity: 0.3;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.header-content svg {
+  color: #fecaca;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.header-content h1 {
+  margin: 0 0 10px 0;
+  font-size: 3rem;
+  font-weight: 800;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.header-content p {
+  margin: 0;
+  font-size: 1.2rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 30px;
+  padding: 30px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.lessons-sidebar {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lessons-sidebar h2 {
+  margin: 0 0 20px 0;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lesson-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.lesson-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+}
+
+.lesson-card.active {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.difficulty-badge {
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.lesson-time {
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.lesson-card h3 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.lesson-card p {
+  margin: 0 0 12px 0;
+  color: #cbd5e1;
+  line-height: 1.5;
+  font-size: 0.9rem;
+}
+
+.completion-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #10b981;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.lesson-viewer {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.lesson-content {
+  padding: 24px;
+  height: 600px;
+  overflow-y: auto;
+}
+
+.lesson-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lesson-info h1 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lesson-info p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 1.1rem;
+}
+
+.lesson-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.lesson-body {
+  color: #e2e8f0;
+}
+
+.chess-board-container {
+  margin-bottom: 24px;
+}
+
+.chess-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: 320px;
+  height: 320px;
+  border: 2px solid #374151;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 auto 16px auto;
+}
+
+.chess-square {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chess-square.light {
+  background: #f0d9b5;
+}
+
+.chess-square.dark {
+  background: #b58863;
+}
+
+.chess-square:hover {
+  background: #7fb069 !important;
+}
+
+.piece {
+  font-size: 24px;
+  user-select: none;
+}
+
+.board-instruction {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.lesson-text h3 {
+  margin: 24px 0 16px 0;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.lesson-section {
+  margin-bottom: 24px;
+}
+
+.lesson-section h4 {
+  margin: 0 0 12px 0;
+  color: #fbbf24;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.lesson-section ul {
+  margin: 0 0 16px 0;
+  padding-left: 20px;
+}
+
+.lesson-section li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.practice-button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.practice-button:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.ad-placeholder {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 24px 0;
+  text-align: center;
+}
+
+.ad-content h4 {
+  margin: 0 0 8px 0;
+  color: #fbbf24;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ad-content p {
+  margin: 0 0 16px 0;
+  color: #e2e8f0;
+}
+
+.ad-button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ad-button:hover {
+  background: #2563eb;
+}
+
+.progress-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-section h3 {
+  margin: 0 0 12px 0;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #3b82f6 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-section p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.no-lesson {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 600px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.no-lesson svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-lesson h2 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.no-lesson p {
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .content-layout {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .chess-board {
+    width: 280px;
+    height: 280px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .lesson-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+}

@@ -1,8 +1,48 @@
+# Core ML dependencies
 torch>=2.0.0
 transformers>=4.35.0
 numpy>=1.24.0
-pillow>=10.0.0
-scipy>=1.11.0
-tqdm>=4.65.0
-pandas>=2.0.0
 scikit-learn>=1.3.0
+scipy>=1.11.0
+einops
+
+# Image processing
+pillow>=10.0.0
+opencv-python>=4.8.0
+
+# Data processing
+pandas>=2.0.0
+tqdm>=4.65.0
+
+# Visualization
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
+# Vector databases
+chromadb>=0.4.0
+
+# Search
+elasticsearch>=8.0.0
+
+# OCR (optional)
+easyocr>=1.7.0
+
+# Sentiment analysis
+torchvision
+timm
+
+# Web scraping (optional)
+# bright-data-sdk  # Install separately if needed
+
+# API and web services
+python-dotenv>=1.0.0
+requests>=2.31.0
+chromadb>=0.4.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
+
+# Development
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0

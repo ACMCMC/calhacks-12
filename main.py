@@ -1,155 +1,112 @@
-"""Main pipeline: Phase 1 - End-to-end training with frozen Jina CLIP v2."""
+"""
+Project Aura - Automated Pipeline Runner
+Runs all components in sequence, skipping completed steps.
+"""
 
-import torch
-import numpy as np
+import sys
+import os
 from pathlib import Path
 
-# Create src as package
-import sys
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+def check_models_exist():
+    """Check if trained models exist."""
+    models_dir = Path("backend/models")
+    required_files = ["user_embeddings.npy", "global_mean.npy", "projector.pt"]
+    return all((models_dir / f).exists() for f in required_files)
 
-from ad_encoder import AdEncoder
-from projector import Projector
-from click_data import SyntheticClickGenerator
-from train_user_embeddings import train_user_embeddings
-from train_projector import train_projector
+def check_ad_metadata_exists():
+    """Check if ad metadata exists."""
+    metadata_file = Path("backend/data/ad_metadata.jsonl")
+    return metadata_file.exists()
 
+def check_chroma_db_exists():
+    """Check if Chroma database exists."""
+    chroma_dir = Path("backend/chroma_db")
+    return chroma_dir.exists() and len(list(chroma_dir.glob("*"))) > 0
+
+def run_training_pipeline():
+    """Run the PrivAds training pipeline."""
+    print("🚀 Running PrivAds Training Pipeline...")
+    exit_code = os.system("python pipeline/training/train_models.py")
+    if exit_code != 0:
+        print("❌ Training pipeline failed!")
+        return False
+    return True
+
+def run_ad_processing():
+    """Run the ad processing pipeline."""
+    print("🎨 Running Ad Processing Pipeline...")
+    exit_code = os.system("python pipeline/run_ad_pipeline.py")
+    if exit_code != 0:
+        print("❌ Ad processing pipeline failed!")
+        return False
+    return True
+
+def run_database_loading():
+    """Load data into databases."""
+    print("💾 Loading Data into Databases...")
+    exit_code = os.system("python pipeline/load_databases.py")
+    if exit_code != 0:
+        print("❌ Database loading failed!")
+        return False
+    return True
+
+def start_backend():
+    """Start the FastAPI backend."""
+    print("🌐 To start the Backend API, run in a separate terminal:")
+    print("   cd backend && python main.py")
+    print("   API will be available at: http://localhost:8000")
 
 def main():
-    print("=" * 60)
-    print("PrivAds Phase 1: Training Pipeline")
-    print("=" * 60)
-    
-    # Config
-    N_USERS = 1000
-    N_ADS = 500
-    N_CLICKS = 10000
-    D_USER = 128
-    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-    
-    # Paths
-    models_dir = Path("models")
-    data_dir = Path("data")
-    models_dir.mkdir(exist_ok=True)
-    data_dir.mkdir(exist_ok=True)
-    
-    print(f"\n📊 Config: {N_USERS} users, {N_ADS} ads, {N_CLICKS} interactions")
-    print(f"🖥️  Device: {DEVICE}")
-    
-    # Step 1: Initialize ad encoder (frozen)
-    print("\n" + "=" * 60)
-    print("Step 1: Load Ad Encoder (Jina CLIP v2 - Frozen)")
-    print("=" * 60)
-    encoder = AdEncoder(device=DEVICE)
-    d_ad = encoder.d_ad
-    
-    # Step 2: Generate synthetic ad embeddings
-    print("\n" + "=" * 60)
-    print("Step 2: Generate Ad Embeddings")
-    print("=" * 60)
-    print("Encoding sample ads...")
-    
-    sample_ads = [
-        "Sustainable children's clothing, eco-friendly",
-        "Luxury watch, premium quality, expensive",
-        "Affordable kids toys, colorful, fun",
-        "Organic food delivery, healthy meals",
-        "Gaming laptop, high performance"
-    ]
-    
-    ad_embeddings_raw = {}
-    for i, text in enumerate(sample_ads):
-        z_ad = encoder.encode(text=text)
-        ad_embeddings_raw[i] = z_ad
-        print(f"  Ad {i}: '{text[:40]}...' -> {z_ad.shape}")
-    
-    # Fill remaining ads with random (simulate)
-    print(f"Filling {N_ADS - len(sample_ads)} more ads with random embeddings (simulated)...")
-    for aid in range(len(sample_ads), N_ADS):
-        ad_embeddings_raw[aid] = np.random.randn(d_ad)
-        ad_embeddings_raw[aid] /= np.linalg.norm(ad_embeddings_raw[aid])
-    
-    np.savez(data_dir / "ad_embeddings_raw.npz", **{str(k): v for k, v in ad_embeddings_raw.items()})
-    print(f"✓ Saved {len(ad_embeddings_raw)} ad embeddings to {data_dir / 'ad_embeddings_raw.npz'}")
-    
-    # Step 3: Generate synthetic clicks
-    print("\n" + "=" * 60)
-    print("Step 3: Generate Synthetic Click Data")
-    print("=" * 60)
-    click_gen = SyntheticClickGenerator(
-        n_users=N_USERS,
-        n_ads=N_ADS,
-        d_user=D_USER,
-        ad_embeddings=None  # Will use random
-    )
-    clicks = click_gen.get_clicks(n_samples=N_CLICKS)
-    
-    n_clicked = sum(1 for _, _, clicked, _ in clicks if clicked)
-    print(f"✓ Generated {len(clicks)} impressions, {n_clicked} clicks (CTR: {n_clicked/len(clicks):.2%})")
-    
-    # Step 4: Train user embeddings
-    print("\n" + "=" * 60)
-    print("Step 4: Train User Embeddings (InfoNCE on co-clicks)")
-    print("=" * 60)
-    user_embeddings, global_mean = train_user_embeddings(
-        clicks=clicks,
-        n_users=N_USERS,
-        d_user=D_USER,
-        epochs=50,
-        batch_size=256,
-        device=DEVICE
-    )
-    
-    np.save(models_dir / "user_embeddings.npy", user_embeddings)
-    np.save(models_dir / "global_mean.npy", global_mean)
-    print(f"✓ Saved user embeddings to {models_dir / 'user_embeddings.npy'}")
-    print(f"✓ Saved global_mean to {models_dir / 'global_mean.npy'}")
-    
-    # Step 5: Train projector
-    print("\n" + "=" * 60)
-    print("Step 5: Train Projector (ad space → user space)")
-    print("=" * 60)
-    projector = train_projector(
-        clicks=clicks,
-        user_embeddings=user_embeddings,
-        ad_embeddings_raw=ad_embeddings_raw,
-        d_ad=d_ad,
-        d_user=D_USER,
-        epochs=30,
-        batch_size=128,
-        device=DEVICE
-    )
-    
-    torch.save(projector.state_dict(), models_dir / "projector.pt")
-    print(f"✓ Saved projector to {models_dir / 'projector.pt'}")
-    
-    # Step 6: Precompute p_ad for all ads
-    print("\n" + "=" * 60)
-    print("Step 6: Precompute Projected Ad Embeddings")
-    print("=" * 60)
-    projector.eval()
-    with torch.no_grad():
-        p_ads = {}
-        for aid, z_ad in ad_embeddings_raw.items():
-            z = torch.tensor(z_ad, dtype=torch.float32, device=DEVICE).unsqueeze(0)
-            p = projector(z).cpu().numpy()[0]
-            p_ads[aid] = p
-    
-    np.savez(data_dir / "ad_projected.npz", **{str(k): v for k, v in p_ads.items()})
-    print(f"✓ Saved {len(p_ads)} projected ad embeddings to {data_dir / 'ad_projected.npz'}")
-    
-    # Summary
-    print("\n" + "=" * 60)
-    print("✅ Phase 1 Complete!")
-    print("=" * 60)
-    print(f"📁 Models saved to: {models_dir.absolute()}")
-    print(f"📁 Data saved to: {data_dir.absolute()}")
-    print("\nNext steps:")
-    print("  - Implement Thompson Sampling (Phase 2)")
-    print("  - Add serving/feedback loops")
-    print("  - Test with real ad data + images")
-    print("=" * 60)
+    """Run the complete Project Aura pipeline."""
+    print("\n" + "="*60)
+    print("🎯 Project Aura: Automated Pipeline Runner")
+    print("="*60)
 
+    success = True
+
+    # Step 1: Check and run training pipeline
+    print("\n📊 Step 1: PrivAds Model Training")
+    if check_models_exist():
+        print("✅ Models already exist, skipping training")
+    else:
+        print("⚠️  Models not found, running training pipeline...")
+        if not run_training_pipeline():
+            success = False
+
+    # Step 2: Check and run ad processing
+    print("\n🎨 Step 2: Ad Processing")
+    if check_ad_metadata_exists():
+        print("✅ Ad metadata already exists, skipping processing")
+    else:
+        print("⚠️  Ad metadata not found, running ad processing...")
+        if not run_ad_processing():
+            success = False
+
+    # Step 3: Check and run database loading
+    print("\n💾 Step 3: Database Loading")
+    if check_chroma_db_exists():
+        print("✅ Chroma database already exists, skipping loading")
+    else:
+        print("⚠️  Chroma database not found, running database loading...")
+        if not run_database_loading():
+            success = False
+
+    # Step 4: Instructions for starting backend API
+    print("\n🌐 Step 4: Backend API")
+    if success:
+        print("✅ All components ready!")
+        start_backend()
+    else:
+        print("❌ Some components failed. Please check the errors above.")
+        print("You can try running individual components manually:")
+        print("  - python pipeline/training/train_models.py")
+        print("  - python pipeline/run_ad_pipeline.py")
+        print("  - python pipeline/load_databases.py")
+        print("  - cd backend && python main.py")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
