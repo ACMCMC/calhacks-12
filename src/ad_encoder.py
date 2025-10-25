@@ -78,7 +78,8 @@ class AdEncoder:
         
         # L2 normalize
         embedding = embedding / embedding.norm(dim=-1, keepdim=True)
-        return embedding.cpu().numpy()[0]
+        # Convert to float32 for numpy compatibility
+        return embedding.cpu().float().numpy()[0]
     
     def encode_batch(
         self,

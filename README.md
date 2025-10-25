@@ -53,7 +53,7 @@ models/
   └── projector.pt              # Projector weights
 
 data/
-  ├── ad_embeddings_raw.npz     # z_ad from Jina CLIP (500, 768)
+  ├── ad_embeddings_raw.npz     # z_ad from Jina CLIP (500, 1024)
   └── ad_projected.npz          # p_ad in user space (500, 128)
 ```
 
