@@ -18,8 +18,9 @@ for i in tqdm(range(0, len(ads), BATCH_SIZE), desc="Encoding ads (batched)"):
     image_paths = [ad["local_path"] for ad in batch]
     embs = [encoder.encode(text=text, image=image_path) for text, image_path in zip(texts, image_paths)]
     for ad, emb in zip(batch, embs):
-        ad_id = ad["id"]
-        ad_embeddings[str(ad_id)] = emb  # ensure string keys
+        ad_id = int(ad["id"])
+        ad_key = f"hf_ad_{ad_id:06d}"
+        ad_embeddings[ad_key] = emb  # always use canonical key
 
 # Save as .pt (torch tensor dict)
 torch.save(ad_embeddings, "data/ad_embeddings_raw.pt")

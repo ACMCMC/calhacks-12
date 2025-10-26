@@ -178,12 +178,12 @@ if __name__ == "__main__":
     ad_id_to_idx = {aid: i for i, aid in enumerate(ad_ids)}
 
     # Load ad embeddings (torch tensors)
-    ad_emb_dict = torch.load("data/ad_embeddings_raw.pt")
+    ad_emb_dict = torch.load("data/ad_embeddings_raw.pt", weights_only=False)
 
-    # Initialize user embeddings randomly
+    # Initialize user embeddings as a leaf Parameter
     d_user = 128
-    user_emb = torch.randn(len(user_ids), d_user, requires_grad=True)
-    user_emb = user_emb / user_emb.norm(dim=1, keepdim=True)
+    user_emb = torch.nn.Parameter(torch.randn(len(user_ids), d_user))
+    user_emb.data = user_emb.data / user_emb.data.norm(dim=1, keepdim=True)
 
     # Initialize projector
     projector = Projector(d_ad=2048, d_user=128)
@@ -204,7 +204,15 @@ if __name__ == "__main__":
     user_user_neg = []
     for u, a, clicked, _ in clicks:
         u_idx = user_id_to_idx[u]
-        a_emb = ad_emb_dict[str(a)]
+        ad_id = int(a)
+        ad_key = f"hf_ad_{ad_id:06d}"
+        if ad_key not in ad_emb_dict:
+            print(f"Warning: ad embedding for ad_id {a} (key {ad_key}) missing, skipping.")
+            continue
+        a_emb = ad_emb_dict[ad_key]
+        # Convert to torch tensor if needed
+        if isinstance(a_emb, np.ndarray):
+            a_emb = torch.tensor(a_emb, dtype=torch.float32, device=user_emb.device)
         if clicked:
             pos_ad_pairs.append((u_idx, a_emb))
         else:

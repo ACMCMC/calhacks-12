@@ -45,16 +45,3 @@ class RealClickData(ClickDataSource):
         return list(df[['user_id', 'ad_id', 'clicked', 'position']].itertuples(
             index=False, name=None
         ))
-
-
-if __name__ == "__main__":
-    # Test synthetic generator
-    gen = SyntheticClickGenerator(n_users=100, n_ads=50)
-    clicks = gen.get_clicks(1000)
-    
-    n_clicked = sum(1 for _, _, clicked, _ in clicks if clicked)
-    print(f"Generated {len(clicks)} impressions, {n_clicked} clicks (CTR: {n_clicked/len(clicks):.2%})")
-    
-    # Show sample
-    for i, (uid, aid, clicked, pos) in enumerate(clicks[:5]):
-        print(f"  {i+1}. user={uid}, ad={aid}, clicked={clicked}, pos={pos}")
