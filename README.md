@@ -1,4 +1,4 @@
-# Project Aura: AI-Native Growth Platform
+# PrivAds: AI-Native Growth Platform
 
 **Reimagining Mixpanel for the AI era** - An active, privacy-first growth platform that functions as both an intelligent ad server and analytics engine.
 

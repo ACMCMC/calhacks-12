@@ -1,5 +1,5 @@
 """
-Database Loading Pipeline for Project Aura
+Database Loading Pipeline for PrivAds
 Loads processed ad data into Chroma (vectors) and Elasticsearch (metadata).
 """
 
@@ -187,7 +187,7 @@ def load_elasticsearch_database(
 def main():
     """Main database loading execution."""
     print("=" * 60)
-    print("Project Aura: Database Loading Pipeline")
+    print("PrivAds: Database Loading Pipeline")
     print("=" * 60)
 
     # Configuration

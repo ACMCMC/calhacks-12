@@ -1,5 +1,5 @@
 """
-Feature Extractor for Project Aura
+Feature Extractor for PrivAds
 Extracts metadata features from ad creatives (images/videos).
 """
 

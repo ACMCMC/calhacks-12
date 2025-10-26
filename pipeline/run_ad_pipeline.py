@@ -1,5 +1,5 @@
 """
-Ad Processing Pipeline for Project Aura
+Ad Processing Pipeline for PrivAds
 Processes ad creatives to extract features, generate embeddings, and create metadata.
 """
 
@@ -205,7 +205,7 @@ def make_json_serializable(obj):
 def main():
     """Main pipeline execution."""
     print("=" * 60)
-    print("Project Aura: Ad Processing Pipeline")
+    print("PrivAds: Ad Processing Pipeline")
     print("=" * 60)
 
     # Default paths

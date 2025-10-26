@@ -1,5 +1,5 @@
 """
-Project Aura - Automated Pipeline Runner
+PrivAds - Automated Pipeline Runner
 Runs all components in sequence, skipping completed steps.
 """
 
@@ -72,9 +72,9 @@ def start_backend():
     print("   API will be available at: http://localhost:8000")
 
 def main():
-    """Run the complete Project Aura pipeline."""
+    """Run the complete PrivAds pipeline."""
     print("\n" + "="*60)
-    print("🎯 Project Aura: Automated Pipeline Runner")
+    print("🎯 PrivAds: Automated Pipeline Runner")
     print("="*60)
 
     success = True

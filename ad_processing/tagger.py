@@ -1,5 +1,5 @@
 """
-Contextual Tagger for Project Aura
+Contextual Tagger for PrivAds
 Generates contextual tags for ad creatives based on content and features.
 """
 

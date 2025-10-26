@@ -1,5 +1,5 @@
 """
-Project Aura Backend API
+PrivAds Backend API
 FastAPI application providing ad serving and search endpoints.
 """
 
@@ -21,7 +21,7 @@ from privads_core import PrivAdsCore
 from elastic_search import search_ads_elastic
 
 app = FastAPI(
-    title="Project Aura API",
+    title="PrivAds API",
     description="AI-Native Growth Platform Backend",
     version="1.0.0"
 )

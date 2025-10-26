@@ -1,5 +1,5 @@
 """
-Elasticsearch integration for Project Aura
+Elasticsearch integration for PrivAds
 Handles natural language search over ad metadata using Elastic Agent Builder.
 """
 

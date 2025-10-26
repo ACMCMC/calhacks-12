@@ -1,5 +1,5 @@
 """
-Training Pipeline Orchestration for Project Aura
+Training Pipeline Orchestration for PrivAds
 Runs the complete PrivAds training pipeline.
 """
 
@@ -22,7 +22,7 @@ import torch
 
 def main():
     print("=" * 60)
-    print("Project Aura: PrivAds Training Pipeline")
+    print("PrivAds: PrivAds Training Pipeline")
     print("=" * 60)
 
     # Config

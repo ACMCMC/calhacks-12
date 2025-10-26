@@ -1,5 +1,5 @@
 """
-Jina CLIP v2 Encoder for Project Aura
+Jina CLIP v2 Encoder for PrivAds
 Handles encoding of ad creatives (text + optional images).
 """
 

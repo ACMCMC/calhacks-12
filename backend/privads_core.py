@@ -1,5 +1,5 @@
 """
-PrivAds Core Logic for Project Aura
+PrivAds Core Logic for PrivAds
 Handles user embeddings, projector, and Chroma database interactions.
 """
 

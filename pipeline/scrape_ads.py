@@ -1,5 +1,5 @@
 """
-Ad Scraping Pipeline for Project Aura
+Ad Scraping Pipeline for PrivAds
 Uses Bright Data to scrape ad creatives from target websites.
 """
 
@@ -459,7 +459,7 @@ def main():
     The number of images extracted from the parquet file is controlled by MAX_AD_IMAGES variable.
     """
     print("=" * 60)
-    print("Project Aura: Ad Scraping Pipeline")
+    print("PrivAds: Ad Scraping Pipeline")
     print("=" * 60)
 
     # Configuration
