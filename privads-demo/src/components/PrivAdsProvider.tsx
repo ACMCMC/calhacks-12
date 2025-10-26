@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 
-// ONNX Runtime for browser ML inference
-import * as ort from 'onnxruntime-web';
+// ONNX Runtime for browser ML inference (loaded globally from CDN)
+declare global {
+  interface Window {
+    ort: any;
+  }
+}
 
 interface AdPrediction {
   probability: number;
@@ -84,18 +88,22 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
 
     const initializePredictor = async () => {
       try {
-        // Load the ONNX model from backend API
-        const response = await fetch('http://localhost:8000/model/interaction_predictor.onnx');
+        // Load ONNX model from backend API (avoids CORS and MIME-type issues)
+        const modelUrl = 'http://localhost:8000/model/interaction_predictor.onnx';        const response = await fetch(modelUrl);
         if (!response.ok) {
-          throw new Error('Failed to load ONNX model');
+          throw new Error(`Failed to load ONNX model from ${modelUrl} (status=${response.status})`);
         }
 
-        const modelBuffer = await response.arrayBuffer();
-        const session = await ort.InferenceSession.create(modelBuffer);
+        const modelBuffer = await response.arrayBuffer();        // Create session using the CPU execution provider to avoid loading the
+        // wasm backend (which requires a .wasm runtime file and correct MIME types).
+        const session = await window.ort.InferenceSession.create(modelBuffer, {
+          executionProviders: ['cpu'],
+          graphOptimizationLevel: 'all'
+        } as any);
 
         setMlPredictor(session);
         setIsMlReady(true);
-        console.log('ML predictor initialized successfully');
+        console.log('ML predictor initialized successfully (cpu backend)');
       } catch (error) {
         console.warn('ONNX model loading failed:', error);
       }
@@ -205,7 +213,7 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
       ];
 
       const featureArray = featureNames.map(name => interactionFeatures[name as keyof typeof interactionFeatures] || 0);
-      const tensor = new ort.Tensor('float32', featureArray, [1, featureArray.length]);
+      const tensor = new window.ort.Tensor('float32', featureArray, [1, featureArray.length]);
 
       // Run inference
       const results = await mlPredictor.run({ float_input: tensor });

@@ -4,7 +4,7 @@ FastAPI application providing ad serving and search endpoints.
 """
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
@@ -277,6 +277,109 @@ async def get_best_ad(request: BestAdRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ad matching error: {str(e)}")
 
+class BestAdRequest(BaseModel):
+    web_text: str
+    user_embedding: List[float]
+
+class BestAdResponse(BaseModel):
+    ad_id: str
+    description: str
+    source_url: str
+    similarity_score: float
+    projected_embedding: List[float]
+
+@app.post("/get_best_ad", response_model=BestAdResponse)
+async def get_best_ad(request: BestAdRequest):
+    """
+    Find the best ad by projecting ad embeddings into user space and matching with user embedding.
+    """
+    try:
+        import torch
+        from pathlib import Path
+        import json
+        from scipy.spatial.distance import cosine
+
+        # Load ad metadata
+        ad_metadata_path = Path("../ad_creatives/scraped_metadata.json")
+        if not ad_metadata_path.exists():
+            raise HTTPException(status_code=404, detail="Ad metadata not found")
+
+        with open(ad_metadata_path, 'r') as f:
+            ad_data = json.load(f)
+
+        # Load ad encoder and projector
+        ad_encoder_path = Path("../pipeline/training/ad_encoder.py")
+        projector_path = Path("../pipeline/training/projector.py")
+
+        if not ad_encoder_path.exists() or not projector_path.exists():
+            raise HTTPException(status_code=404, detail="Model files not found")
+
+        # Import modules dynamically
+        import importlib.util
+
+        # Load ad encoder
+        spec = importlib.util.spec_from_file_location("ad_encoder", ad_encoder_path)
+        ad_encoder_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ad_encoder_module)
+        AdEncoder = ad_encoder_module.AdEncoder
+
+        # Load projector
+        spec = importlib.util.spec_from_file_location("projector", projector_path)
+        projector_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(projector_module)
+        Projector = projector_module.Projector
+
+        # Initialize encoder and projector
+        encoder = AdEncoder(device="cpu")  # Use CPU for API calls
+        projector = Projector(d_ad=encoder.d_ad, d_user=128)
+
+        # Load projector weights
+        projector_path = Path("../models/projector.pt")
+        if not projector_path.exists():
+            raise HTTPException(status_code=404, detail="Projector model not found")
+
+        projector.load_state_dict(torch.load(projector_path, map_location='cpu'))
+        projector.eval()
+
+        # Convert user embedding to tensor
+        user_embedding = torch.tensor(request.user_embedding, dtype=torch.float32)
+
+        best_ad = None
+        best_similarity = -1
+        best_projected = None
+
+        # Evaluate each ad
+        for ad in ad_data['ads']:
+            # Encode ad text into embedding
+            ad_embedding = encoder.encode(text=ad['description'])
+
+            # Convert to tensor and project into user space
+            ad_tensor = torch.tensor(ad_embedding, dtype=torch.float32).unsqueeze(0)
+            with torch.no_grad():
+                projected_ad = projector(ad_tensor).squeeze(0)
+
+            # Calculate similarity with user embedding
+            similarity = 1 - cosine(projected_ad.numpy(), user_embedding.numpy())
+
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_ad = ad
+                best_projected = projected_ad.tolist()
+
+        if not best_ad:
+            raise HTTPException(status_code=404, detail="No ads found")
+
+        return BestAdResponse(
+            ad_id=best_ad['id'],
+            description=best_ad['description'],
+            source_url=best_ad['source_url'],
+            similarity_score=float(best_similarity),
+            projected_embedding=best_projected
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ad matching error: {str(e)}")
+
 @app.get("/model/interaction_predictor.onnx")
 async def get_onnx_model():
     """Serve the ONNX model file with correct MIME type"""
@@ -284,14 +387,16 @@ async def get_onnx_model():
     if not model_path.exists():
         raise HTTPException(status_code=404, detail="Model file not found")
 
-    def file_generator():
-        with open(model_path, "rb") as f:
-            yield from f
-
-    return StreamingResponse(
-        file_generator(),
+    return FileResponse(
+        str(model_path),
         media_type="application/wasm",
-        headers={"Content-Disposition": "attachment; filename=interaction_predictor.onnx"}
+        filename="interaction_predictor.onnx",
+        headers={
+            "Cache-Control": "public, max-age=3600",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
     )
 
 if __name__ == "__main__":

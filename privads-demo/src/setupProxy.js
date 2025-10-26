@@ -12,7 +12,7 @@ module.exports = function(app) {
       },
       onProxyReq: (proxyReq, req, res) => {
         // Set correct MIME type for ONNX files
-        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Type', 'application/wasm');
       }
     })
   );
