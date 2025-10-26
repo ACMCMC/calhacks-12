@@ -1,3 +1,6 @@
+# PrivAds - Consolidated Requirements
+# Install with: pip install -r requirements_consolidated.txt
+
 # Core ML dependencies
 torch>=2.0.0
 transformers>=4.35.0
@@ -24,27 +27,41 @@ chromadb>=0.4.0
 # Search
 elasticsearch>=8.0.0
 
-# OCR (optional)
-easyocr>=1.7.0
-
 # Sentiment analysis
 torchvision
 timm
 
-# Web scraping (optional)
-# bright-data-sdk  # Install separately if needed
-
-# API and web services
-python-dotenv>=1.0.0
-requests>=2.31.0
-chromadb>=0.4.0
+# Web framework & API
 fastapi>=0.100.0
 uvicorn>=0.23.0
 pydantic>=2.0.0
+requests>=2.31.0
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+httpx>=0.25.2
 
-# Development
+# Web scraping
+beautifulsoup4>=4.12.2
+lxml>=4.9.3
+urllib3>=2.1.0
+html5lib>=1.1
+
+# AI/ML - Gemini API
+google-generativeai>=0.3.2
+
+# Text processing (optional)
+nltk>=3.8.1
+spacy>=3.7.2
+
+# OCR (optional)
+easyocr>=1.7.0
+
+# Development & Testing
 pytest>=7.0.0
+pytest-asyncio>=0.21.1
 black>=23.0.0
 flake8>=6.0.0
 
+# Utilities
+pathlib2>=2.3.7
 skl2onnx
