@@ -1,0 +1,45 @@
+{
+  "name": "brightdata-live-web-access-workshop",
+  "version": "1.0.0",
+  "description": "Learn how to give AI agents access to real-time web data",
+  "main": "src/main_workflow.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main_workflow.js",
+    "verify": "node src/verify_setup.js",
+    "demo:api": "node src/brightdata_api_demo.js",
+    "demo:mcp": "node src/brightdata_mcp_demo.js",
+    "ad-intelligence": "node src/ad_intelligence_main.js",
+    "collect-ads": "node src/brightdata_collector.js",
+    "collect-datasets": "node src/dataset_collector.js",
+    "analyze-assets": "node src/asset_analyzer.js",
+    "simple-analyze": "node src/simple_analyzer.js",
+    "test-reka": "node src/test_reka.js",
+    "working-analyze": "node src/working_analyzer.js",
+    "create-fingerprint": "node src/feature_fingerprint.js",
+    "smart-collect": "node src/smart_collector.js",
+    "scale-collect": "node src/scaled_collector.js",
+    "extract-features": "node src/reka_integration.js"
+  },
+  "keywords": [
+    "brightdata",
+    "web-scraping",
+    "ai",
+    "llm",
+    "serp-api"
+  ],
+  "author": "Bright Data",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-fetch": "^3.3.2",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@langchain/anthropic": "^0.3.10",
+    "@langchain/langgraph": "^0.4.8",
+    "@langchain/mcp-adapters": "^0.6.0",
+    "@langchain/core": "^0.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
