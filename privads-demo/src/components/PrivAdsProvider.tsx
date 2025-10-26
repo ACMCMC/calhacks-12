@@ -32,18 +32,10 @@ interface PrivAdsContextType {
     session_duration: number;
     scroll_down_count: number;
     scroll_up_count: number;
-    click_count: number;
-    hover_count: number;
-    blur_count: number;
-    focus_count: number;
-    wait_count: number;
-    close_tab_count: number;
     scroll_depth_max: number;
     interaction_density: number;
     attention_score: number;
     scroll_velocity_avg: number;
-    click_to_hover_ratio: number;
-    blur_frequency: number;
     action_entropy: number;
     burstiness_score: number;
     engagement_rhythm: number;
@@ -117,18 +109,10 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     session_duration: 0,
     scroll_down_count: 0,
     scroll_up_count: 0,
-    click_count: 0,
-    hover_count: 0,
-    blur_count: 0,
-    focus_count: 0,
-    wait_count: 0,
-    close_tab_count: 0,
     scroll_depth_max: 0,
     interaction_density: 0,
     attention_score: 0,
     scroll_velocity_avg: 0,
-    click_to_hover_ratio: 0,
-    blur_frequency: 0,
     action_entropy: 0,
     burstiness_score: 0,
     engagement_rhythm: 0
@@ -208,10 +192,8 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
       // Convert features to array in correct order
       const featureNames = [
         'time_since_last_action', 'avg_time_between_actions', 'session_duration',
-        'scroll_down_count', 'scroll_up_count', 'click_count', 'hover_count',
-        'blur_count', 'focus_count', 'wait_count', 'close_tab_count',
-        'scroll_depth_max', 'interaction_density', 'attention_score',
-        'scroll_velocity_avg', 'click_to_hover_ratio', 'blur_frequency',
+        'scroll_down_count', 'scroll_up_count', 'scroll_depth_max',
+        'interaction_density', 'attention_score', 'scroll_velocity_avg',
         'action_entropy', 'burstiness_score', 'engagement_rhythm'
       ];
 
@@ -226,10 +208,9 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
       const firstKey = outputKeys[0];
 
       // Use the correct output key and ensure conversion to Number
-      // 'probabilities' is likely a Float32Array or similar
+      // 'probabilities' is an object with a .data property (Float32Array)
       const probabilities = results['probabilities'];
-      // Convert to array of numbers (not BigInt)
-      const probArray = Array.from(probabilities).map(Number);
+      const probArray = Array.from(probabilities.data).map(Number);
       // Defensive: check for NaN or undefined
       const mlProbability = (probArray[1] !== undefined && !isNaN(probArray[1])) ? probArray[1] * 100 : 0; // Use positive class probability, fallback to 0
 
@@ -312,18 +293,10 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     session_duration: number;
     scroll_down_count: number;
     scroll_up_count: number;
-    click_count: number;
-    hover_count: number;
-    blur_count: number;
-    focus_count: number;
-    wait_count: number;
-    close_tab_count: number;
     scroll_depth_max: number;
     interaction_density: number;
     attention_score: number;
     scroll_velocity_avg: number;
-    click_to_hover_ratio: number;
-    blur_frequency: number;
     action_entropy: number;
     burstiness_score: number;
     engagement_rhythm: number;
@@ -392,12 +365,6 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     const focusBalance = focusCount - blurCount;
     const attentionScore = Math.max(0, Math.min(1, 0.5 + focusBalance * 10 + interactionDensity * 0.1));
 
-    // Click to hover ratio
-    const clickToHoverRatio = clickCount / (hoverCount + 0.001);
-
-    // Blur frequency
-    const blurFrequency = blurCount;
-
     // Action entropy
     const totalActions = Object.values(actionCounts).reduce((a, b) => a + b, 0);
     let actionEntropy = 0;
@@ -434,18 +401,10 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
       session_duration: sessionDuration,
       scroll_down_count: scrollDownCount,
       scroll_up_count: scrollUpCount,
-      click_count: clickCount,
-      hover_count: hoverCount,
-      blur_count: blurCount,
-      focus_count: focusCount,
-      wait_count: waitCount,
-      close_tab_count: closeTabCount,
       scroll_depth_max: scrollDepthMax,
       interaction_density: interactionDensity,
       attention_score: attentionScore,
       scroll_velocity_avg: scrollVelocityAvg,
-      click_to_hover_ratio: clickToHoverRatio,
-      blur_frequency: blurFrequency,
       action_entropy: actionEntropy,
       burstiness_score: burstinessScore,
       engagement_rhythm: engagementRhythm

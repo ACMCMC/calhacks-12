@@ -5,8 +5,8 @@ Trains logistic regression model with polynomial features on synthetic interacti
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler, PolynomialFeatures
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import roc_auc_score, classification_report, confusion_matrix
@@ -36,8 +36,7 @@ class InteractionModelTrainer:
         # Model pipeline
         self.model = Pipeline([
             ('scaler', StandardScaler()),
-            ('poly', PolynomialFeatures(degree=2, interaction_only=True)),
-            ('classifier', LogisticRegression(random_state=random_seed, max_iter=1000))
+            ('classifier', RandomForestClassifier(random_state=random_seed, n_estimators=100, class_weight='balanced'))
         ])
 
         self.is_trained = False
@@ -168,28 +167,26 @@ class InteractionModelTrainer:
         if not self.is_trained:
             raise ValueError("Model must be trained before analyzing features")
 
-        # Get feature importances from logistic regression coefficients
-        # Note: After polynomial features, we need to map back to original features
-        poly_features = self.model.named_steps['poly']
         classifier = self.model.named_steps['classifier']
 
-        # Get feature names after polynomial transformation
-        poly_feature_names = poly_features.get_feature_names_out(feature_names)
-
-        # Get absolute coefficients as importance scores
-        coefficients = np.abs(classifier.coef_[0])
-
-        # Sort by importance
-        sorted_indices = np.argsort(coefficients)[::-1]
-        top_features = [(poly_feature_names[i], coefficients[i]) for i in sorted_indices[:20]]
+        if hasattr(classifier, 'feature_importances_'):
+            # Tree-based model
+            importances = classifier.feature_importances_
+            sorted_indices = np.argsort(importances)[::-1]
+            top_features = [(feature_names[i], importances[i]) for i in sorted_indices[:20]]
+        else:
+            # Fallback for linear models
+            coef = np.abs(classifier.coef_[0])
+            sorted_indices = np.argsort(coef)[::-1]
+            top_features = [(feature_names[i], coef[i]) for i in sorted_indices[:20]]
 
         print("\nTop 20 Most Important Features:")
         for name, importance in top_features:
-            print(".4f")
+            print(f"{name}: {importance:.4f}")
 
         return {
             'top_features': top_features,
-            'all_coefficients': dict(zip(poly_feature_names, coefficients))
+            'all_importances': dict(zip(feature_names, importances if hasattr(classifier, 'feature_importances_') else coef))
         }
 
     def plot_feature_distributions(self, X: np.ndarray, y: np.ndarray, feature_names: List[str]):
@@ -197,23 +194,19 @@ class InteractionModelTrainer:
         df = pd.DataFrame(X, columns=feature_names)
         df['clicked_ad'] = y
 
-        # Plot distributions for top features
-        top_features = ['time_since_last_action', 'interaction_density', 'attention_score',
-                       'click_count', 'blur_frequency', 'scroll_depth_max']
-
-        fig, axes = plt.subplots(2, 3, figsize=(15, 10))
-        axes = axes.ravel()
-
-        for i, feature in enumerate(top_features):
-            if i < len(axes):
-                sns.histplot(data=df, x=feature, hue='clicked_ad', ax=axes[i], alpha=0.7)
-                axes[i].set_title(f'{feature} Distribution')
-
+        # Only plot features that exist in the dataframe
+        plot_features = [f for f in feature_names if f in df.columns]
+        n_features = len(plot_features)
+        fig, axes = plt.subplots(n_features, 1, figsize=(8, 3 * n_features))
+        if n_features == 1:
+            axes = [axes]
+        for i, feature in enumerate(plot_features):
+            sns.histplot(data=df, x=feature, hue='clicked_ad', ax=axes[i], alpha=0.7)
+            axes[i].set_title(f"Distribution of {feature}")
         plt.tight_layout()
-        plt.savefig('/home/acreomarino/privads/models/feature_distributions.png', dpi=150, bbox_inches='tight')
-        print("Feature distributions plot saved to models/feature_distributions.png")
+        plt.show()
 
-    def run_full_pipeline(self, n_samples: int = 50000):
+    def run_full_pipeline(self, n_samples: int = 100000):
         """Run the complete training pipeline"""
         print("=== Starting Interaction Model Training Pipeline ===")
 
@@ -279,7 +272,7 @@ class InteractionModelTrainer:
 if __name__ == "__main__":
     # Run the full training pipeline
     trainer = InteractionModelTrainer()
-    results = trainer.run_full_pipeline(n_samples=10000)  # Start with smaller dataset for testing
+    results = trainer.run_full_pipeline(n_samples=100000)  # Start with smaller dataset for testing
 
     print("\nTraining Summary:")
     print(f"Cross-validation AUC: {results['cv_results']['cv_auc_mean']:.4f} ± {results['cv_results']['cv_auc_std']:.4f}")

@@ -21,20 +21,12 @@ class WindowFeatures:
     # Action counts (normalized by window size)
     scroll_down_count: float
     scroll_up_count: float
-    click_count: float
-    hover_count: float
-    blur_count: float
-    focus_count: float
-    wait_count: float
-    close_tab_count: float
 
     # Derived features
     scroll_depth_max: float
     interaction_density: float
     attention_score: float
     scroll_velocity_avg: float
-    click_to_hover_ratio: float
-    blur_frequency: float
 
     # Pattern features
     action_entropy: float
@@ -49,18 +41,10 @@ class WindowFeatures:
             self.session_duration,
             self.scroll_down_count,
             self.scroll_up_count,
-            self.click_count,
-            self.hover_count,
-            self.blur_count,
-            self.focus_count,
-            self.wait_count,
-            self.close_tab_count,
             self.scroll_depth_max,
             self.interaction_density,
             self.attention_score,
             self.scroll_velocity_avg,
-            self.click_to_hover_ratio,
-            self.blur_frequency,
             self.action_entropy,
             self.burstiness_score,
             self.engagement_rhythm
@@ -77,10 +61,8 @@ class SlidingWindowExtractor:
     def __init__(self):
         self.feature_names = [
             'time_since_last_action', 'avg_time_between_actions', 'session_duration',
-            'scroll_down_count', 'scroll_up_count', 'click_count', 'hover_count',
-            'blur_count', 'focus_count', 'wait_count', 'close_tab_count',
-            'scroll_depth_max', 'interaction_density', 'attention_score',
-            'scroll_velocity_avg', 'click_to_hover_ratio', 'blur_frequency',
+            'scroll_down_count', 'scroll_up_count', 'scroll_depth_max',
+            'interaction_density', 'attention_score', 'scroll_velocity_avg',
             'action_entropy', 'burstiness_score', 'engagement_rhythm'
         ]
 
@@ -113,12 +95,6 @@ class SlidingWindowExtractor:
         window_duration = window_end - window_start
         scroll_down_count = action_counts['scroll_down'] / window_duration
         scroll_up_count = action_counts['scroll_up'] / window_duration
-        click_count = action_counts['click'] / window_duration
-        hover_count = action_counts['hover'] / window_duration
-        blur_count = action_counts['blur_window'] / window_duration
-        focus_count = action_counts['focus_window'] / window_duration
-        wait_count = action_counts['wait'] / window_duration
-        close_tab_count = action_counts['close_tab'] / window_duration
 
         # Calculate scroll depth (cumulative scroll amount)
         scroll_depth = 0
@@ -139,14 +115,8 @@ class SlidingWindowExtractor:
         interaction_density = len(window_actions) / window_duration
 
         # Attention score (based on focus/blur balance and interaction patterns)
-        focus_balance = focus_count - blur_count
+        focus_balance = action_counts['focus_window'] - action_counts['blur_window']
         attention_score = max(0, min(1, 0.5 + focus_balance * 10 + interaction_density * 0.1))
-
-        # Click to hover ratio (engagement quality indicator)
-        click_to_hover_ratio = click_count / (hover_count + 0.001)  # Avoid division by zero
-
-        # Blur frequency (distraction indicator)
-        blur_frequency = blur_count
 
         # Action entropy (diversity of actions)
         total_actions = sum(action_counts.values())
@@ -183,18 +153,10 @@ class SlidingWindowExtractor:
             session_duration=session_duration,
             scroll_down_count=scroll_down_count,
             scroll_up_count=scroll_up_count,
-            click_count=click_count,
-            hover_count=hover_count,
-            blur_count=blur_count,
-            focus_count=focus_count,
-            wait_count=wait_count,
-            close_tab_count=close_tab_count,
             scroll_depth_max=scroll_depth_max,
             interaction_density=interaction_density,
             attention_score=attention_score,
             scroll_velocity_avg=scroll_velocity_avg,
-            click_to_hover_ratio=click_to_hover_ratio,
-            blur_frequency=blur_frequency,
             action_entropy=action_entropy,
             burstiness_score=burstiness_score,
             engagement_rhythm=engagement_rhythm

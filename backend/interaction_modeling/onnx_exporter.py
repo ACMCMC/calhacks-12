@@ -33,10 +33,14 @@ class ONNXExporter:
         self.scaler = joblib.load(self.scaler_path)
         print(f"✓ Loaded scaler from {self.scaler_path}")
 
-        # Load feature names
-        with open(self.feature_names_path, 'r') as f:
-            self.feature_names = json.load(f)
-        print(f"✓ Loaded {len(self.feature_names)} feature names")
+        # Use only minimal robust features
+        self.feature_names = [
+            'time_since_last_action', 'avg_time_between_actions', 'session_duration',
+            'scroll_down_count', 'scroll_up_count', 'scroll_depth_max',
+            'interaction_density', 'attention_score', 'scroll_velocity_avg',
+            'action_entropy', 'burstiness_score', 'engagement_rhythm'
+        ]
+        print(f"✓ Using {len(self.feature_names)} minimal robust features")
 
     def create_simplified_model(self):
         """Create a simplified model without polynomial features for better browser performance"""

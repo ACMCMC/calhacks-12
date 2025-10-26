@@ -50,7 +50,7 @@ def run_ad_processing():
 def run_interaction_modeling():
     """Run the interaction modeling training pipeline."""
     print("🤖 Running Interaction Modeling Pipeline...")
-    exit_code = os.system("cd backend/interaction_modeling && python run_pipeline.py --samples 50000")
+    exit_code = os.system("cd backend/interaction_modeling && python run_pipeline.py --samples 100000")
     if exit_code != 0:
         print("❌ Interaction modeling pipeline failed!")
         return False
