@@ -1,5 +1,9 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-pydantic==2.5.0
-python-dotenv==1.0.0
-chromadb>=0.3.21
+setuptools>=70.0.0
+wheel>=0.41.0
+pip>=23.3.0
+fastapi==0.120.0
+uvicorn==0.38.0
+pydantic==2.12.3
+python-dotenv==1.1.1
+chromadb==1.2.1
+numpy==2.3.4
