@@ -1,5 +1,7 @@
-import React from 'react';
+// File: privads_demo/src/websites/NewsSite.tsx
+import React, { useMemo } from 'react';
 import './NewsSite.css';
+import CustomizedAd from '../components/CustomizedAd';
 
 const ARTICLE = {
   title: 'AI Revolution in Healthcare: New Breakthroughs Save Lives',
@@ -36,6 +38,20 @@ const ARTICLE = {
 };
 
 const NewsSite: React.FC = () => {
+  // Extract page context for ad customization
+  const pageContext = useMemo(() => {
+    const contentText = ARTICLE.content.slice(0, 5).join(' '); // First 5 paragraphs
+
+    return {
+      title: ARTICLE.title,
+      content: contentText,
+      keywords: ['AI', 'healthcare', 'technology', 'medical', 'diagnosis', 'innovation'],
+      page_type: 'news' as const,
+      url: window.location.href,
+      summary_text: ARTICLE.content[0], // Lead paragraph
+    };
+  }, []);
+
   return (
     <div className="news-article-simple">
       <h1>{ARTICLE.title}</h1>
@@ -44,7 +60,12 @@ const NewsSite: React.FC = () => {
         <span> | {new Date(ARTICLE.publishedAt).toLocaleDateString()}</span>
       </div>
       <div className="article-body-simple">
-        {ARTICLE.content.map((para, i) => <p key={i}>{para}</p>)}
+        {ARTICLE.content.slice(0, 3).map((para, i) => <p key={i}>{para}</p>)}
+
+        {/* Customized Ad appears after 3 paragraphs */}
+        <CustomizedAd pageContext={pageContext} />
+
+        {ARTICLE.content.slice(3).map((para, i) => <p key={i + 3}>{para}</p>)}
       </div>
     </div>
   );

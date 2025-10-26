@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 import base64
 from datetime import datetime
+from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

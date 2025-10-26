@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePrivAds } from '../components/PrivAdsProvider';
 import { BookOpen, Play, CheckCircle, Star, Users, Clock } from 'lucide-react';
 import './EducationalPlatform.css';
+import CustomizedAd from '../components/CustomizedAd';
 
 interface Course {
   id: string;
@@ -95,6 +96,15 @@ const EducationalPlatform: React.FC = () => {
     { id: 'Science', name: 'Science', color: '#f59e0b' },
     { id: 'Language', name: 'Language', color: '#ef4444' }
   ];
+
+  const pageContext = useMemo(() => ({
+    title: 'Learnify - Online Learning Platform',
+    content: 'Expert-led courses in programming, design, business, science, and languages',
+    keywords: ['education', 'learning', 'courses', 'programming', 'design', 'business'],
+    page_type: 'education',
+    url: window.location.href,
+    summary_text: 'Unlock your potential with expert-led courses and personalized learning',
+  }), []);
 
   useEffect(() => {
     // Update site context for educational platform
@@ -341,13 +351,14 @@ const EducationalPlatform: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="ad-placeholder">
+                {/* <div className="ad-placeholder">
                   <div className="ad-content">
                     <h4>Advanced Learning Tools</h4>
                     <p>Accelerate your learning with AI-powered study assistants and personalized learning paths.</p>
                     <button className="ad-button">Explore Learning AI</button>
                   </div>
-                </div>
+                </div> */}
+                <CustomizedAd pageContext={pageContext} />
 
                 <div className="course-resources">
                   <h3>Course Resources</h3>
