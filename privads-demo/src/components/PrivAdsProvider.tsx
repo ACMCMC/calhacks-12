@@ -134,6 +134,9 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     engagement_rhythm: 0
   });
 
+  // --- Action history state (for proper sliding window) ---
+  const [actionHistory, setActionHistory] = useState<UserAction[]>([]);
+
   const updatePrediction = useCallback((prediction: AdPrediction) => {
     setCurrentPrediction(prediction);
   }, []);
@@ -197,7 +200,7 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
 
   const updatePredictionFromML = useCallback(async () => {
     if (!isMlReady || !mlPredictor) {
-      console.warn('ML predictor not ready, using fallback');
+      // ML predictor not ready: do nothing (no fallback, no error)
       return;
     }
 
@@ -217,131 +220,238 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
 
       // Run inference
       const results = await mlPredictor.run({ float_input: tensor });
-      const mlProbability = results.output.data[0] * 100; // Convert to percentage
+      // Log the output keys for debugging
+      const outputKeys = Object.keys(results);
+      console.log('ONNX output keys:', outputKeys);
+      const firstKey = outputKeys[0];
 
-      // Blend ML prediction with current prediction for smooth updates
-      const blendedProbability = (currentPrediction.probability * 0.7) + (mlProbability * 0.3);
+      // Use the correct output key and ensure conversion to Number
+      // 'probabilities' is likely a Float32Array or similar
+      const probabilities = results['probabilities'];
+      // Convert to array of numbers (not BigInt)
+      const probArray = Array.from(probabilities).map(Number);
+      // Defensive: check for NaN or undefined
+      const mlProbability = (probArray[1] !== undefined && !isNaN(probArray[1])) ? probArray[1] * 100 : 0; // Use positive class probability, fallback to 0
 
+      // Debug: print input features and ONNX output
+      console.log('ML input features:', featureArray);
+      console.log('ONNX output probabilities:', probArray);
+
+      // Print model input names for debugging
+      if (mlPredictor && mlPredictor.inputNames) {
+        console.log('ONNX model input names:', mlPredictor.inputNames);
+      }
+      // Print raw ONNX output
+      console.log('ONNX raw output:', results);
+
+      // Update prediction with ML probability only
       updatePrediction({
         ...currentPrediction,
-        probability: Math.min(blendedProbability, 95)
+        probability: Math.min(mlProbability, 95)
       });
 
-      console.log(`ML prediction: ${mlProbability.toFixed(2)}% (blended: ${blendedProbability.toFixed(2)}%)`);
+      console.log(`ML prediction: ${mlProbability.toFixed(2)}%`);
     } catch (error) {
       console.warn('ML prediction error:', error);
     }
   }, [interactionFeatures, currentPrediction, updatePrediction, isMlReady, mlPredictor]);
 
+  // --- Real-time sliding window update ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now() / 1000;
+      const windowSize = 120; // 2 minutes
+      const windowStart = now - windowSize;
+      const features = computeSlidingWindowFeatures(actionHistory, windowStart, now);
+      if (features) {
+        setInteractionFeatures(features);
+        // Update ML prediction on every window update
+        updatePredictionFromML();
+      }
+    }, 100); // Update every 0.1 second
+    return () => clearInterval(interval);
+  }, [actionHistory]);
+
+  // --- Track interaction by pushing to action history ---
   const trackInteraction = useCallback((interactionType: string, details?: any) => {
-    const now = Date.now() / 1000; // Current time in seconds
+    const now = Date.now() / 1000;
+    setActionHistory(prev => [
+      ...prev,
+      { timestamp: now, action: interactionType, details: details || {} }
+    ]);
+  }, []);
 
-    // Update interaction features
-    setInteractionFeatures(prev => {
-      const updated = { ...prev };
+  // --- Listen for scroll events and push to action history ---
+  useEffect(() => {
+    function handleScroll(e: Event) {
+      const scrollY = window.scrollY || window.pageYOffset;
+      const lastScroll = (window as any)._lastScrollY || 0;
+      const direction = scrollY > lastScroll ? 'scroll_down' : 'scroll_up';
+      const amount = Math.abs(scrollY - lastScroll);
+      (window as any)._lastScrollY = scrollY;
+      trackInteraction(direction, { scroll_amount: amount / (window.innerHeight || 1) });
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [trackInteraction]);
 
-      // Update time-based features
-      const timeSinceLast = now - (prev.session_duration || now);
-      updated.time_since_last_action = timeSinceLast;
-      updated.session_duration = now - ((window as any).sessionStartTime || now);
+  // --- Types for Sliding Window Feature Extraction ---
+  interface ActionDetails {
+    scroll_amount?: number;
+  }
 
-      switch (interactionType) {
-        case 'scroll_down':
-          updated.scroll_down_count += 1;
-          updated.scroll_depth_max = Math.max(updated.scroll_depth_max, details?.scrollPercent || 0);
-          updated.scroll_velocity_avg = (updated.scroll_velocity_avg + (details?.velocity || 0.1)) / 2;
-          break;
-        case 'scroll_up':
-          updated.scroll_up_count += 1;
-          updated.scroll_velocity_avg = (updated.scroll_velocity_avg + (details?.velocity || 0.1)) / 2;
-          break;
-        case 'click':
-          updated.click_count += 1;
-          break;
-        case 'hover':
-          updated.hover_count += 1;
-          break;
-        case 'blur':
-          updated.blur_count += 1;
-          updated.blur_frequency = updated.blur_count / Math.max(updated.session_duration, 1);
-          break;
-        case 'focus':
-          updated.focus_count += 1;
-          break;
-        case 'wait':
-          updated.wait_count += 1;
-          break;
+  interface UserAction {
+    timestamp: number;
+    action: string;
+    details?: ActionDetails;
+  }
+
+  interface SlidingWindowFeatures {
+    time_since_last_action: number;
+    avg_time_between_actions: number;
+    session_duration: number;
+    scroll_down_count: number;
+    scroll_up_count: number;
+    click_count: number;
+    hover_count: number;
+    blur_count: number;
+    focus_count: number;
+    wait_count: number;
+    close_tab_count: number;
+    scroll_depth_max: number;
+    interaction_density: number;
+    attention_score: number;
+    scroll_velocity_avg: number;
+    click_to_hover_ratio: number;
+    blur_frequency: number;
+    action_entropy: number;
+    burstiness_score: number;
+    engagement_rhythm: number;
+  }
+
+  // --- Sliding Window Feature Extraction (matches Python logic) ---
+  function computeSlidingWindowFeatures(
+    actionHistory: UserAction[],
+    windowStart: number,
+    windowEnd: number
+  ): SlidingWindowFeatures | null {
+    // Clamp window to not exceed current time
+    const timeNow = Date.now() / 1000;
+    // Filter actions in this window
+    const windowActions = actionHistory.filter((a: UserAction) => a.timestamp >= windowStart && a.timestamp <= windowEnd && a.timestamp <= timeNow);
+    if (windowActions.length < 5) return null; // Not enough data
+
+    // Temporal features
+    const timestamps = windowActions.map((a: UserAction) => a.timestamp);
+    const timeSinceLastAction =
+      timestamps.length > 0
+        ? Math.max(0, windowEnd - timestamps[timestamps.length - 1])
+        : windowEnd - windowStart;
+    let avgTimeBetweenActions: number;
+    if (timestamps.length > 1) {
+      const intervals = timestamps.slice(1).map((t, i) => t - timestamps[i]);
+      avgTimeBetweenActions = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    } else {
+      avgTimeBetweenActions = windowEnd - windowStart;
+    }
+    const sessionDuration = windowEnd - (actionHistory.length > 0 ? actionHistory[0].timestamp : windowEnd);
+
+    // Count actions (normalized by window size)
+    const actionCounts: Record<string, number> = {
+      scroll_down: 0, scroll_up: 0, click: 0, hover: 0, blur_window: 0, focus_window: 0, wait: 0, close_tab: 0
+    };
+    windowActions.forEach((a: UserAction) => { if (actionCounts[a.action] !== undefined) actionCounts[a.action] += 1; });
+    const windowDuration = windowEnd - windowStart;
+    const scrollDownCount = actionCounts.scroll_down / windowDuration;
+    const scrollUpCount = actionCounts.scroll_up / windowDuration;
+    const clickCount = actionCounts.click / windowDuration;
+    const hoverCount = actionCounts.hover / windowDuration;
+    const blurCount = actionCounts.blur_window / windowDuration;
+    const focusCount = actionCounts.focus_window / windowDuration;
+    const waitCount = actionCounts.wait / windowDuration;
+    const closeTabCount = actionCounts.close_tab / windowDuration;
+
+    // Scroll depth and velocity
+    let scrollDepth = 0;
+    let scrollAmounts: number[] = [];
+    windowActions.forEach((a: UserAction) => {
+      if (a.action === 'scroll_down' || a.action === 'scroll_up') {
+        const amount = a.details?.scroll_amount ?? 0.1;
+        if (a.action === 'scroll_down') scrollDepth += amount;
+        else scrollDepth -= amount;
+        scrollAmounts.push(amount);
       }
-
-      // Calculate derived features
-      const totalActions = updated.scroll_down_count + updated.scroll_up_count +
-                          updated.click_count + updated.hover_count +
-                          updated.blur_count + updated.focus_count + updated.wait_count;
-
-      updated.interaction_density = totalActions / Math.max(updated.session_duration, 1);
-
-      // Attention score based on focus/blur balance
-      const focusBalance = updated.focus_count - updated.blur_count;
-      updated.attention_score = Math.max(0, Math.min(1, 0.5 + focusBalance * 0.1 + updated.interaction_density * 0.1));
-
-      // Click to hover ratio
-      updated.click_to_hover_ratio = updated.click_count / Math.max(updated.hover_count, 0.1);
-
-      // Simple action entropy (diversity measure)
-      const actionTypes = [updated.scroll_down_count, updated.scroll_up_count,
-                          updated.click_count, updated.hover_count,
-                          updated.blur_count, updated.focus_count, updated.wait_count];
-      const total = actionTypes.reduce((a, b) => a + b, 0);
-      if (total > 0) {
-        const probs = actionTypes.map(count => count / total);
-        updated.action_entropy = -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log(p) : 0), 0);
-      }
-
-      return updated;
     });
+    const scrollDepthMax = Math.max(0, scrollDepth);
+    const scrollVelocityAvg = scrollAmounts.length > 0 ? scrollAmounts.reduce((a, b) => a + b, 0) / scrollAmounts.length : 0;
 
-    // Update local prediction immediately for responsiveness
-    let interactionBonus = 0;
-    let contextBonus = 0;
+    // Interaction density
+    const interactionDensity = windowActions.length / windowDuration;
 
-    switch (interactionType) {
-      case 'scroll_down':
-      case 'scroll_up':
-        interactionBonus = 3; // Scrolling shows deeper engagement
-        contextBonus = details?.scrollPercent * 0.2 || 0;
-        break;
-      case 'click':
-        interactionBonus = 10; // Clicks show strong interest
-        break;
-      case 'hover':
-        interactionBonus = 2; // Hovering shows consideration
-        break;
-      case 'focus':
-        interactionBonus = 5; // Returning focus shows renewed attention
-        break;
-      case 'blur':
-        interactionBonus = -2; // Losing focus reduces engagement
-        break;
+    // Attention score
+    const focusBalance = focusCount - blurCount;
+    const attentionScore = Math.max(0, Math.min(1, 0.5 + focusBalance * 10 + interactionDensity * 0.1));
+
+    // Click to hover ratio
+    const clickToHoverRatio = clickCount / (hoverCount + 0.001);
+
+    // Blur frequency
+    const blurFrequency = blurCount;
+
+    // Action entropy
+    const totalActions = Object.values(actionCounts).reduce((a, b) => a + b, 0);
+    let actionEntropy = 0;
+    if (totalActions > 0) {
+      const probs = Object.values(actionCounts).map(c => c / totalActions);
+      actionEntropy = -probs.reduce((sum, p) => sum + (p > 0 ? p * Math.log(p + 1e-10) : 0), 0);
     }
 
-    const newProbability = Math.min(currentPrediction.probability + interactionBonus, 95);
-    const newContextRelevance = Math.min(currentPrediction.factors.contextRelevance + contextBonus, 90);
-    const newInteractionHistory = Math.min(currentPrediction.factors.interactionHistory + interactionBonus * 0.8, 85);
-
-    updatePrediction({
-      probability: newProbability,
-      factors: {
-        ...currentPrediction.factors,
-        contextRelevance: newContextRelevance,
-        interactionHistory: newInteractionHistory
-      }
-    });
-
-    // Trigger ML prediction update (throttled)
-    if (Math.random() < 0.3) { // 30% chance to update ML prediction
-      updatePredictionFromML();
+    // Burstiness score
+    let burstinessScore = 0;
+    if (timestamps.length > 2) {
+      const intervals = timestamps.slice(1).map((t, i) => t - timestamps[i]);
+      const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const std = Math.sqrt(intervals.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / intervals.length);
+      burstinessScore = std / (mean + 1e-10);
     }
-  }, [currentPrediction, updatePrediction, updatePredictionFromML]);
+
+    // Engagement rhythm
+    let engagementRhythm = 0;
+    if (timestamps.length > 3) {
+      const intervals = timestamps.slice(1).map((t, i) => t - timestamps[i]);
+      if (intervals.length > 1) {
+        // Simple autocorrelation
+        const mean = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        const num = intervals.slice(0, -1).map((v, i) => (v - mean) * (intervals[i + 1] - mean)).reduce((a, b) => a + b, 0);
+        const den = intervals.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0);
+        engagementRhythm = den > 0 ? Math.max(0, num / den) : 0;
+      }
+    }
+
+    return {
+      time_since_last_action: timeSinceLastAction,
+      avg_time_between_actions: avgTimeBetweenActions,
+      session_duration: sessionDuration,
+      scroll_down_count: scrollDownCount,
+      scroll_up_count: scrollUpCount,
+      click_count: clickCount,
+      hover_count: hoverCount,
+      blur_count: blurCount,
+      focus_count: focusCount,
+      wait_count: waitCount,
+      close_tab_count: closeTabCount,
+      scroll_depth_max: scrollDepthMax,
+      interaction_density: interactionDensity,
+      attention_score: attentionScore,
+      scroll_velocity_avg: scrollVelocityAvg,
+      click_to_hover_ratio: clickToHoverRatio,
+      blur_frequency: blurFrequency,
+      action_entropy: actionEntropy,
+      burstiness_score: burstinessScore,
+      engagement_rhythm: engagementRhythm
+    };
+  }
+  // --- End Sliding Window Feature Extraction ---
 
   const value = useMemo(() => ({
     userId,

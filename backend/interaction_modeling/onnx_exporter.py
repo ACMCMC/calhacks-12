@@ -79,10 +79,11 @@ class ONNXExporter:
         n_features = len(self.feature_names)
         initial_type = [('float_input', FloatTensorType([None, n_features]))]
 
-        # Convert to ONNX
+        # Convert to ONNX with older opset for browser compatibility
         onnx_model = convert_sklearn(
             model_to_export,
             initial_types=initial_type,
+            target_opset=8,  # Use ONNX opset 8 for browser compatibility
             options={'zipmap': False}  # Better for browser performance
         )
 
