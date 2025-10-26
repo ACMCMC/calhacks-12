@@ -9,3 +9,4 @@ chromadb==1.2.1
 numpy==2.3.4
 joblib==1.5.2
 torch>=2.0.0
+elasticsearch==9.1.1
