@@ -8,3 +8,4 @@ python-dotenv==1.1.1
 chromadb==1.2.1
 numpy==2.3.4
 joblib==1.5.2
+torch>=2.0.0
