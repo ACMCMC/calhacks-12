@@ -76,6 +76,24 @@ class QuickAdResponse(BaseModel):
     injection_code: str
     success: bool
 
+class PageContextRequest(BaseModel):
+    """Request with page context directly from frontend."""
+    page_context: Dict[str, Any]  # title, content, keywords, page_type
+    user_embedding: Optional[List[float]] = None
+    user_id: Optional[str] = None
+    injection_method: str = "web_component"
+
+class PageContextResponse(BaseModel):
+    """Response with customized ad."""
+    success: bool
+    ad_id: str
+    customized_ad_text: str
+    original_ad_description: str
+    confidence_score: float
+    ad_features: Dict[str, Any]
+    customization_metadata: Dict[str, Any]
+    error_message: Optional[str] = None
+
 @app.post("/web_ad/complete", response_model=WebAdResponse)
 async def get_complete_web_ad(request: WebAdRequest):
     """
@@ -199,6 +217,77 @@ async def get_quick_ad(request: QuickAdRequest):
             success=False
         )
 
+# @app.post("/web_ad/from_context", response_model=PageContextResponse)
+# async def get_ad_from_context(request: PageContextRequest): # right now this is hardcoded
+#     """
+#     Get customized ad from page context (for privads-demo frontend).
+#     Skips web scraping since context is provided directly.
+#     """
+#     try:
+#         logger.info(f"from_context called for url={request.page_context.get('url')}")
+#         # Simple mock response so frontend receives an ad immediately
+#         mock_ad_id = "mock_ad_001"
+#         page_title = request.page_context.get("title") or request.page_context.get("page_title") or "this page"
+#         customized_text = f"Special offer tailored for readers of '{page_title}': Try our eco-friendly picks — 20% off!"
+#         response = PageContextResponse(
+#             success=True,
+#             ad_id=mock_ad_id,
+#             customized_ad_text=customized_text,
+#             original_ad_description="Mock ad: 20% off eco products",
+#             confidence_score=0.92,
+#             ad_features={"category": "sustainable", "discount": "20%", "cta": "Shop now"},
+#             customization_metadata={"method": "mock_from_context"}
+#         )
+#         return response
+#     except Exception as e:
+#         logger.exception("Error in /web_ad/from_context")
+#         raise HTTPException(status_code=500, detail=str(e))
+@app.post("/web_ad/from_context", response_model=PageContextResponse)
+async def get_ad_from_context(request: PageContextRequest):
+    """Get customized ad from page context."""
+    try:
+        logger.info(f"Processing ad from context: {request.page_context.get('title', 'unknown')}")
+
+        web_content = request.page_context
+
+        # Hardcoded ad for testing
+        from gemini_customizer import AdCustomizationRequest as CustomizationReq
+        customization_req = CustomizationReq(
+            ad_context={
+                'ad_id': 'test_001',
+                'description': 'Discover eco-friendly sustainable products with 20% off',
+                'ad_features': {'category': 'sustainable'}
+            },
+            web_context=web_content
+        )
+
+        customized_response = gemini_customizer.customize_ad(customization_req)
+        logger.info(f"Customized ad: {customized_response.customized_ad_text[:50]}...")
+
+        return PageContextResponse(
+            success=True,
+            ad_id=customized_response.original_ad_id,
+            customized_ad_text=customized_response.customized_ad_text,
+            original_ad_description='Eco-friendly products',
+            confidence_score=customized_response.confidence_score,
+            ad_features={'category': 'sustainable'},
+            customization_metadata=customized_response.customization_applied
+        )
+
+    except Exception as e:
+        logger.exception("Error in /web_ad/from_context")
+        return PageContextResponse(
+            success=False,
+            ad_id="",
+            customized_ad_text="",
+            original_ad_description="",
+            confidence_score=0.0,
+            ad_features={},
+            customization_metadata={},
+            error_message=str(e)
+        )
+
+
 @app.get("/web_ad/extract/{url:path}")
 async def extract_web_content(url: str):
     """
@@ -259,6 +348,47 @@ async def test_endpoint():
             "success": False,
             "error": str(e)
         }
+@app.get("/web_ad/test_gemini")
+async def test_gemini():
+    """Test Gemini API directly"""
+    try:
+        logger.info("Testing Gemini API...")
+        
+        from gemini_customizer import AdCustomizationRequest as CustomizationReq
+        
+        test_request = CustomizationReq(
+            ad_context={
+                'ad_id': 'test_001',
+                'description': 'Test eco-friendly products - 20% off',
+                'ad_features': {'category': 'sustainable'},
+                'content_signals': {}
+            },
+            web_context={
+                'title': 'Test Page',
+                'keywords': ['test', 'demo'],
+                'page_type': 'news',
+                'summary_text': 'This is a test page'
+            }
+        )
+        
+        logger.info("Calling gemini_customizer.customize_ad...")
+        result = gemini_customizer.customize_ad(test_request)
+        logger.info(f"Gemini returned: {result.customized_ad_text}")
+        
+        return {
+            "success": True,
+            "customized_text": result.customized_ad_text,
+            "confidence": result.confidence_score,
+            "time_taken": "check server logs"
+        }
+        
+    except Exception as e:
+        logger.error(f"Gemini test failed: {e}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8002)

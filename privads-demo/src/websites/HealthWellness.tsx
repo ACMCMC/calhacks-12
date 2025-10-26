@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePrivAds } from '../components/PrivAdsProvider';
 import { Heart, Activity, Moon, Apple, Droplets } from 'lucide-react';
 import './HealthWellness.css';
+import CustomizedAd from '../components/CustomizedAd';
 
 interface WellnessTip {
   id: string;
@@ -70,6 +71,15 @@ const HealthWellness: React.FC = () => {
     { id: 'Mental Health', name: 'Mental Health', icon: Heart, color: '#f59e0b' },
     { id: 'Hydration', name: 'Hydration', icon: Droplets, color: '#06b6d4' }
   ];
+
+  const pageContext = useMemo(() => ({
+    title: 'VitaLife Hub - Health & Wellness',
+    content: 'Personalized wellness tips and practices for healthy living',
+    keywords: ['health', 'wellness', 'fitness', 'nutrition', 'meditation', 'mindfulness'],
+    page_type: 'wellness',
+    url: window.location.href,
+    summary_text: 'Discover daily wellness practices for better health and happiness',
+  }), []);
 
   useEffect(() => {
     // Update site context for health & wellness
@@ -357,13 +367,14 @@ const HealthWellness: React.FC = () => {
                   )}
                 </div>
 
-                <div className="ad-placeholder">
+                {/* <div className="ad-placeholder">
                   <div className="ad-content">
                     <h4>Personalized Wellness Plans</h4>
                     <p>Get AI-powered wellness recommendations tailored to your lifestyle and goals.</p>
                     <button className="ad-button">Explore Wellness AI</button>
                   </div>
-                </div>
+                </div> */}
+                <CustomizedAd pageContext={pageContext} />
 
                 <div className="benefits-section">
                   <h3>Benefits of This Practice</h3>
