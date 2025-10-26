@@ -67,3 +67,5 @@ pathlib2>=2.3.7
 skl2onnx
 datasets
 brightdata-sdk
+
+joblib==1.5.2
