@@ -46,7 +46,7 @@ const CustomizedAd: React.FC<CustomizedAdProps> = ({ pageContext: providedContex
       try {
         console.log('[CustomizedAd] 1️⃣ Fetching ad with context:', pageContext);
 
-        const response = await fetch('http://localhost:8002/web_ad/from_context', {
+        const response = await fetch(`${AD_SERVICE_BASE_URL}/web_ad/from_context`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
