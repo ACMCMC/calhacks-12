@@ -17,93 +17,78 @@ class AdEncoder:
             device: 'cuda' or 'cpu'
         """
         self.device = device if torch.cuda.is_available() else "cpu"
-        print(f"Loading {model_name} on {self.device}...")
-        
+        print(f"Loading jinaai/jina-clip-v2 on {self.device}...")
         self.model = AutoModel.from_pretrained(
-            model_name,
+            "jinaai/jina-clip-v2",
             trust_remote_code=True
         ).to(self.device)
         self.processor = AutoProcessor.from_pretrained(
-            model_name,
+            "jinaai/jina-clip-v2",
             trust_remote_code=True
         )
         self.model.eval()
-        
-        # Get embedding dimension
-        with torch.no_grad():
-            dummy = self.processor(text=["test"], return_tensors="pt").to(self.device)
-            self.d_ad = self.model.get_text_features(**dummy).shape[-1]
-        
-        print(f"✓ Loaded {model_name}, embedding dim: {self.d_ad}")
+        self.d_ad = 1024
+        print(f"✓ Loaded jinaai/jina-clip-v2, embedding dim: {self.d_ad}")
     
     @torch.no_grad()
     def encode(
-        self, 
-        text: str, 
+        self,
+        text: str,
         image: Optional[Union[Image.Image, str]] = None
     ) -> np.ndarray:
         """
         Encode ad into single unified embedding.
-        
         Args:
             text: Ad description text
             image: PIL Image or path to image file (optional)
-        
         Returns:
             z_ad: Normalized embedding vector (d_ad,)
         """
-        # Load image if path provided
-        if isinstance(image, str):
-            image = Image.open(image).convert("RGB")
-        
+        inputs = {}
+        if text:
+            inputs.update(self.processor(text=[text], return_tensors="pt"))
+        img = None
         if image is not None:
-            # Multimodal: text + image
-            inputs = self.processor(
-                text=[text],
-                images=[image],
-                return_tensors="pt",
-                padding=True
-            ).to(self.device)
-            
-            # Get unified embedding - use image features for multimodal
-            embedding = self.model.get_image_features(**inputs)
+            if isinstance(image, str):
+                img = Image.open(image).convert("RGB")
+            else:
+                img = image
+        if img is not None:
+            inputs.update(self.processor(images=[img], return_tensors="pt"))
+        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        outputs = self.model(**inputs)
+        image_emb = outputs["image_embeds"][0].to(torch.float32).cpu() if "image_embeds" in outputs else None
+        text_emb = outputs["text_embeds"][0].to(torch.float32).cpu() if "text_embeds" in outputs else None
+        if image_emb is not None and text_emb is not None:
+            embedding = torch.cat([image_emb, text_emb])
+        elif image_emb is not None:
+            embedding = image_emb
+        elif text_emb is not None:
+            embedding = text_emb
         else:
-            # Text only
-            inputs = self.processor(
-                text=[text],
-                return_tensors="pt",
-                padding=True
-            ).to(self.device)
-            embedding = self.model.get_text_features(**inputs)
-        
-        # L2 normalize
-        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
-        # Convert to float32 for numpy compatibility
-        return embedding.cpu().float().numpy()[0]
+            raise ValueError("No image or text embedding produced by model.")
+        embedding = embedding / embedding.norm()
+        return embedding.numpy()
     
     def encode_batch(
         self,
-        texts: list[str],
-        images: Optional[list[Optional[Union[Image.Image, str]]]] = None
+        texts: list,
+        images: Optional[list] = None
     ) -> np.ndarray:
         """
         Encode batch of ads.
-        
         Args:
             texts: List of ad descriptions
             images: List of images (None for text-only ads)
-        
         Returns:
             embeddings: (batch_size, d_ad)
         """
         if images is None:
             images = [None] * len(texts)
-        
         embeddings = []
         for text, image in zip(texts, images):
             emb = self.encode(text=text, image=image)
             embeddings.append(emb)
-        
         return np.stack(embeddings)
 
 
