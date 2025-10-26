@@ -1,19 +1,16 @@
 """
-Gemini API Integration for Ad Customization
-Uses Google's Gemini API to generate customized text-based ads.
+Simple Gemini API Integration for Ad Customization
+Uses requests library instead of Python SDK for better reliability
 """
 
 import os
-import json
 import logging
-from typing import Dict, List, Optional, Any
-import google.generativeai as genai
-from pydantic import BaseModel
 import requests
+from typing import Dict, List, Optional, Any
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()  # Only look in current directory
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,242 +30,157 @@ class AdCustomizationResponse(BaseModel):
     generation_metadata: Dict[str, Any]
 
 class GeminiAdCustomizer:
-    """Service for customizing ads using Google's Gemini API."""
+    """Service for customizing ads."""
     
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize the Gemini ad customizer.
-        
-        Args:
-            api_key: Google AI API key. If not provided, will try to get from environment.
-        """
+        """Initialize the customizer."""
         self.api_key = api_key or os.getenv('GOOGLE_AI_API_KEY')
+        
         if not self.api_key:
-            logger.warning("No Google AI API key provided. Set GOOGLE_AI_API_KEY environment variable.")
-            self.model = None
+            logger.warning("No GOOGLE_AI_API_KEY found - using template-based customization only")
         else:
-            try:
-                genai.configure(api_key=self.api_key)
-                self.model = genai.GenerativeModel('gemini-2.0-flash')
-                logger.info("Gemini API initialized successfully")
-            except Exception as e:
-                logger.error(f"Error initializing Gemini API: {e}")
-                self.model = None
+            logger.info(f"✅ Gemini API key configured (first 20 chars: {self.api_key[:20]}...)")
     
     def customize_ad(self, request: AdCustomizationRequest) -> AdCustomizationResponse:
-        """
-        Generate a customized ad based on web context and ad features.
-        
-        Args:
-            request: AdCustomizationRequest containing ad and web context
-            
-        Returns:
-            AdCustomizationResponse with customized ad text
-        """
+        """Customize an ad based on web context."""
         try:
-            if not self.model:
-                return self._fallback_customization(request)
+            ad_id = request.ad_context.get('ad_id', 'unknown')
+            original_description = request.ad_context.get('description', '')
+            web_keywords = request.web_context.get('keywords', [])
+            page_type = request.web_context.get('page_type', 'general')
+            page_title = request.web_context.get('title', 'this page')
             
-            # Prepare the prompt
-            prompt = self._build_customization_prompt(request)
+            logger.info(f"Customizing ad {ad_id} for {page_type} page: {page_title}")
             
-            # Generate customized ad
-            response = self.model.generate_content(prompt)
-            customized_text = response.text.strip()
+            # Try Gemini first if API key exists
+            if self.api_key:
+                try:
+                    customized_text = self._customize_with_gemini_http(
+                        original_description,
+                        page_type,
+                        web_keywords,
+                        page_title
+                    )
+                    logger.info(f"✅ Gemini customization successful")
+                    return AdCustomizationResponse(
+                        customized_ad_text=customized_text,
+                        original_ad_id=ad_id,
+                        customization_applied={
+                            'method': 'gemini_http',
+                            'web_context_integrated': True,
+                            'keywords_incorporated': len(web_keywords) > 0
+                        },
+                        confidence_score=0.85,
+                        generation_metadata={'model': 'gemini-2.0-flash-001', 'method': 'http'}
+                    )
+                except Exception as e:
+                    logger.warning(f"⚠️ Gemini failed ({type(e).__name__}: {str(e)[:100]}), falling back to template")
             
-            # Extract metadata
-            generation_metadata = {
-                'model_used': 'gemini-pro',
-                'prompt_length': len(prompt),
-                'response_length': len(customized_text),
-                'safety_ratings': getattr(response, 'safety_ratings', [])
-            }
-            
-            # Calculate confidence score
-            confidence_score = self._calculate_confidence_score(request, customized_text)
-            
-            # Determine customization applied
-            customization_applied = self._analyze_customization_applied(request, customized_text)
+            # Fallback to template-based
+            customized_text = self._customize_with_template(
+                original_description,
+                page_type,
+                web_keywords,
+                page_title
+            )
+            logger.info(f"Using template-based customization")
             
             return AdCustomizationResponse(
                 customized_ad_text=customized_text,
-                original_ad_id=request.ad_context.get('ad_id', 'unknown'),
-                customization_applied=customization_applied,
-                confidence_score=confidence_score,
-                generation_metadata=generation_metadata
+                original_ad_id=ad_id,
+                customization_applied={
+                    'method': 'template',
+                    'web_context_integrated': True,
+                    'keywords_incorporated': len(web_keywords) > 0
+                },
+                confidence_score=0.65,
+                generation_metadata={'model': 'template_based'}
             )
             
         except Exception as e:
-            logger.error(f"Error in ad customization: {e}")
-            return self._fallback_customization(request)
+            logger.error(f"Error in customize_ad: {e}", exc_info=True)
+            raise
     
-    def _build_customization_prompt(self, request: AdCustomizationRequest) -> str:
-        """Build the prompt for Gemini API."""
-        ad_context = request.ad_context
-        web_context = request.web_context
+    def _customize_with_gemini_http(self, ad_text: str, page_type: str, keywords: List[str], page_title: str) -> str:
+        """Use Gemini API via direct HTTP request."""
+        keywords_str = ', '.join(keywords[:5]) if keywords else 'your needs'
         
-        # Extract key information
-        ad_description = ad_context.get('description', '')
-        ad_features = ad_context.get('ad_features', {})
-        web_summary = web_context.get('summary_text', '')
-        page_type = web_context.get('page_type', 'general')
-        web_keywords = web_context.get('keywords', [])
-        
-        prompt = f"""
-You are an expert advertising copywriter tasked with creating a customized text-based advertisement.
+        prompt = f"""You are an expert copywriter. Create a short, compelling ad (2-3 sentences) that:
+1. Mentions the core value: {ad_text}
+2. Relates to this page: {page_title}
+3. Incorporates these keywords naturally: {keywords_str}
+4. Matches the tone for a {page_type} page
 
-ORIGINAL AD CONTEXT:
-- Description: {ad_description}
-- Category: {ad_features.get('category', 'general')}
-- Product Type: {ad_features.get('product_type', 'product')}
-- Target Audience: {ad_features.get('target_audience', 'general')}
-- Price Range: {ad_features.get('price_range', 'standard')}
-
-WEB PAGE CONTEXT:
-- Page Type: {page_type}
-- Content Summary: {web_summary}
-- Key Topics: {', '.join(web_keywords[:5]) if web_keywords else 'general'}
-
-CUSTOMIZATION REQUIREMENTS:
-1. Adapt the ad language to match the web page's tone and context
-2. Incorporate relevant keywords from the web content naturally
-3. Make the ad feel native to the page content
-4. Maintain the core product value proposition
-5. Keep the ad concise but compelling (2-3 sentences max)
-6. Use appropriate call-to-action based on page context
-
-GENERATE A CUSTOMIZED AD TEXT that:
-- Feels natural and relevant to the current web page
-- Maintains the original ad's core message
-- Incorporates web page context seamlessly
-- Is engaging and likely to convert
-
-Format your response as just the customized ad text, nothing else.
-"""
+Return ONLY the ad text, nothing else."""
         
-        return prompt.strip()
-    
-    def _calculate_confidence_score(self, request: AdCustomizationRequest, customized_text: str) -> float:
-        """Calculate confidence score for the customization."""
-        score = 0.5  # Base score
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-001:generateContent?key={self.api_key}"
         
-        # Check if customization incorporates web context
-        web_keywords = request.web_context.get('keywords', [])
-        if web_keywords:
-            keyword_matches = sum(1 for keyword in web_keywords[:5] 
-                                if keyword.lower() in customized_text.lower())
-            score += (keyword_matches / len(web_keywords[:5])) * 0.3
-        
-        # Check if original ad message is preserved
-        original_description = request.ad_context.get('description', '')
-        if original_description:
-            # Simple check for key product terms
-            original_words = set(original_description.lower().split())
-            customized_words = set(customized_text.lower().split())
-            overlap = len(original_words.intersection(customized_words))
-            if original_words:
-                score += (overlap / len(original_words)) * 0.2
-        
-        return min(score, 1.0)
-    
-    def _analyze_customization_applied(self, request: AdCustomizationRequest, customized_text: str) -> Dict[str, Any]:
-        """Analyze what customizations were applied."""
-        customizations = {
-            'web_context_integration': False,
-            'keyword_incorporation': False,
-            'tone_adaptation': False,
-            'length_optimization': False
+        payload = {
+            "contents": [{
+                "parts": [{
+                    "text": prompt
+                }]
+            }]
         }
         
-        # Check web context integration
-        web_keywords = request.web_context.get('keywords', [])
-        if web_keywords:
-            keyword_matches = sum(1 for keyword in web_keywords[:5] 
-                                if keyword.lower() in customized_text.lower())
-            customizations['web_context_integration'] = keyword_matches > 0
-            customizations['keyword_incorporation'] = keyword_matches > 0
+        logger.info(f"Calling Gemini API via HTTP (gemini-2.0-flash-001)...")
         
-        # Check tone adaptation (simple heuristic)
-        page_type = request.web_context.get('page_type', 'general')
-        if page_type == 'news' and any(word in customized_text.lower() 
-                                      for word in ['breaking', 'latest', 'update']):
-            customizations['tone_adaptation'] = True
-        elif page_type == 'ecommerce' and any(word in customized_text.lower() 
-                                             for word in ['buy', 'shop', 'deal']):
-            customizations['tone_adaptation'] = True
-        
-        # Check length optimization
-        original_length = len(request.ad_context.get('description', ''))
-        customized_length = len(customized_text)
-        customizations['length_optimization'] = customized_length < original_length * 1.5
-        
-        return customizations
+        try:
+            response = requests.post(url, json=payload, timeout=15)
+            
+            logger.info(f"Gemini response status: {response.status_code}")
+            
+            if response.status_code != 200:
+                error_text = response.text[:200]
+                logger.error(f"Gemini API error: {response.status_code} - {error_text}")
+                raise Exception(f"Gemini API returned {response.status_code}")
+            
+            data = response.json()
+            
+            # Extract text from response
+            if 'candidates' in data and len(data['candidates']) > 0:
+                candidate = data['candidates'][0]
+                content = candidate.get('content', {})
+                parts = content.get('parts', [])
+                if parts and len(parts) > 0:
+                    text = parts[0].get('text', '').strip()
+                    if text:
+                        logger.info(f"Got response: {text[:80]}...")
+                        return text
+            
+            raise Exception("No valid text in Gemini response")
+            
+        except requests.Timeout:
+            logger.error("❌ Gemini API timeout after 15 seconds")
+            raise
+        except requests.RequestException as e:
+            logger.error(f"❌ Request failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ Error parsing Gemini response: {e}")
+            raise
     
-    def _fallback_customization(self, request: AdCustomizationRequest) -> AdCustomizationResponse:
-        """Fallback customization when Gemini API is not available."""
-        ad_context = request.ad_context
-        web_context = request.web_context
+    def _customize_with_template(self, ad_text: str, page_type: str, keywords: List[str], page_title: str) -> str:
+        """Simple template-based customization when Gemini isn't available."""
         
-        # Simple template-based customization
-        original_description = ad_context.get('description', '')
-        web_keywords = web_context.get('keywords', [])
-        page_type = web_context.get('page_type', 'general')
-        
-        # Add web context keywords if available
-        if web_keywords:
-            keyword_text = f" {web_keywords[0]}"
-            customized_text = f"{original_description}{keyword_text}. Perfect for your needs!"
+        # Build a customized version using templates
+        if keywords:
+            keyword = keywords[0]
+            base = f"{ad_text} Perfect for {keyword}."
         else:
-            customized_text = f"{original_description}. Discover more today!"
+            base = ad_text
         
-        # Adjust for page type
+        # Adapt tone based on page type
         if page_type == 'news':
-            customized_text = f"Breaking: {customized_text}"
+            return f"Breaking: {base} Don't miss out."
+        elif page_type == 'education':
+            return f"Learn more: {base} Enhance your knowledge."
+        elif page_type == 'wellness':
+            return f"Health tip: {base} Improve your wellbeing."
         elif page_type == 'ecommerce':
-            customized_text = f"Shop Now: {customized_text}"
-        
-        return AdCustomizationResponse(
-            customized_ad_text=customized_text,
-            original_ad_id=ad_context.get('ad_id', 'unknown'),
-            customization_applied={
-                'web_context_integration': bool(web_keywords),
-                'keyword_incorporation': bool(web_keywords),
-                'tone_adaptation': True,
-                'length_optimization': True
-            },
-            confidence_score=0.6,  # Lower confidence for fallback
-            generation_metadata={
-                'model_used': 'fallback_template',
-                'fallback_reason': 'Gemini API not available'
-            }
-        )
+            return f"Shop now: {base} Limited time offer!"
+        else:
+            return f"{base} Discover today!"
 
-# Initialize the customizer
+# Initialize globally
 gemini_customizer = GeminiAdCustomizer()
-
-# Example usage and testing
-if __name__ == "__main__":
-    # Test the customizer
-    test_request = AdCustomizationRequest(
-        ad_context={
-            'ad_id': 'test_ad_001',
-            'description': 'Revolutionary smartphone with AI-powered camera',
-            'ad_features': {
-                'category': 'technology',
-                'product_type': 'smartphone',
-                'target_audience': 'tech_enthusiasts'
-            }
-        },
-        web_context={
-            'summary_text': 'Latest tech news and smartphone reviews',
-            'page_type': 'news',
-            'keywords': ['smartphone', 'tech', 'review', 'camera', 'ai']
-        }
-    )
-    
-    result = gemini_customizer.customize_ad(test_request)
-    print("Customized Ad:")
-    print(result.customized_ad_text)
-    print(f"\nConfidence Score: {result.confidence_score}")
-    print(f"Customizations Applied: {result.customization_applied}")
-

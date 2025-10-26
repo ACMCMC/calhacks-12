@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { usePrivAds } from '../components/PrivAdsProvider';
 import { Crown, Target, BookOpen, Trophy } from 'lucide-react';
 import './ChessTutorial.css';
+import CustomizedAd from '../components/CustomizedAd';
 
 interface ChessLesson {
   id: string;
@@ -52,6 +53,7 @@ const ChessTutorial: React.FC = () => {
       completed: false
     }
   ];
+
 
   useEffect(() => {
     // Update site context for chess learning
@@ -104,6 +106,15 @@ const ChessTutorial: React.FC = () => {
       default: return '#6b7280';
     }
   };
+
+  const pageContext = useMemo(() => ({
+    title: 'Chess Master Academy - Learn Chess',
+    content: 'Interactive chess tutorials from beginner to advanced levels',
+    keywords: ['chess', 'strategy', 'tactics', 'education', 'games', 'learning'],
+    page_type: 'education',
+    url: window.location.href,
+    summary_text: 'Master the game of chess with interactive tutorials and practice',
+  }), []);
 
   return (
     <div className="chess-tutorial">
@@ -281,13 +292,14 @@ const ChessTutorial: React.FC = () => {
                   )}
                 </div>
 
-                <div className="ad-placeholder">
+                {/* <div className="ad-placeholder">
                   <div className="ad-content">
                     <h4>Strategic Thinking Tools</h4>
                     <p>Enhance your chess skills with AI-powered analysis and personalized training plans.</p>
                     <button className="ad-button">Explore Chess Analytics</button>
                   </div>
-                </div>
+                </div> */}
+                <CustomizedAd pageContext={pageContext} />
 
                 <div className="progress-section">
                   <h3>Lesson Progress</h3>
