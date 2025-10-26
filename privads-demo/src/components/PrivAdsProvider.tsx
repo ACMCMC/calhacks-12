@@ -241,16 +241,23 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now() / 1000;
-      const windowSize = 120; // 2 minutes
+      const windowSize = 10; // 10s sliding window
       const windowStart = now - windowSize;
-      const features = computeSlidingWindowFeatures(actionHistory, windowStart, now);
-      if (features) {
-        setInteractionFeatures(features);
-        // Update ML prediction on every window update
-        updatePredictionFromML();
-      }
-    }, 100); // Update every 0.1 second
+      // Remove old actions outside the window
+      setActionHistory(prev => prev.filter(a => a.timestamp >= windowStart));
+    }, 100); // Prune every 0.1 second
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const now = Date.now() / 1000;
+    const windowSize = 10;
+    const windowStart = now - windowSize;
+    const features = computeSlidingWindowFeatures(actionHistory, windowStart, now);
+    if (features) {
+      setInteractionFeatures(features);
+      updatePredictionFromML();
+    }
   }, [actionHistory]);
 
   // --- Track interaction by pushing to action history ---
