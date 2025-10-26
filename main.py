@@ -13,6 +13,12 @@ def check_models_exist():
     required_files = ["user_embeddings.npy", "global_mean.npy", "projector.pt"]
     return all((models_dir / f).exists() for f in required_files)
 
+def check_interaction_model_exists():
+    """Check if interaction ML model exists."""
+    models_dir = Path("backend/models")
+    required_files = ["interaction_predictor.pkl", "interaction_scaler.pkl", "feature_names.json"]
+    return all((models_dir / f).exists() for f in required_files)
+
 def check_ad_metadata_exists():
     """Check if ad metadata exists."""
     metadata_file = Path("backend/data/ad_metadata.jsonl")
@@ -26,7 +32,7 @@ def check_chroma_db_exists():
 def run_training_pipeline():
     """Run the PrivAds training pipeline."""
     print("🚀 Running PrivAds Training Pipeline...")
-    exit_code = os.system("python pipeline/training/train_models.py")
+    exit_code = os.system("cd /home/acreomarino/privads && python pipeline/training/train_models.py")
     if exit_code != 0:
         print("❌ Training pipeline failed!")
         return False
@@ -35,16 +41,25 @@ def run_training_pipeline():
 def run_ad_processing():
     """Run the ad processing pipeline."""
     print("🎨 Running Ad Processing Pipeline...")
-    exit_code = os.system("python pipeline/run_ad_pipeline.py")
+    exit_code = os.system("cd /home/acreomarino/privads && python pipeline/run_ad_pipeline.py")
     if exit_code != 0:
         print("❌ Ad processing pipeline failed!")
+        return False
+    return True
+
+def run_interaction_modeling():
+    """Run the interaction modeling training pipeline."""
+    print("🤖 Running Interaction Modeling Pipeline...")
+    exit_code = os.system("cd backend/interaction_modeling && python run_pipeline.py --samples 50000")
+    if exit_code != 0:
+        print("❌ Interaction modeling pipeline failed!")
         return False
     return True
 
 def run_database_loading():
     """Load data into databases."""
     print("💾 Loading Data into Databases...")
-    exit_code = os.system("python pipeline/load_databases.py")
+    exit_code = os.system("cd /home/acreomarino/privads && python pipeline/load_databases.py")
     if exit_code != 0:
         print("❌ Database loading failed!")
         return False
@@ -73,8 +88,17 @@ def main():
         if not run_training_pipeline():
             success = False
 
-    # Step 2: Check and run ad processing
-    print("\n🎨 Step 2: Ad Processing")
+    # Step 2: Check and run interaction modeling
+    print("\n🤖 Step 2: Interaction Modeling")
+    if check_interaction_model_exists():
+        print("✅ Interaction model already exists, skipping training")
+    else:
+        print("⚠️  Interaction model not found, running interaction modeling...")
+        if not run_interaction_modeling():
+            success = False
+
+    # Step 3: Check and run ad processing
+    print("\n🎨 Step 3: Ad Processing")
     if check_ad_metadata_exists():
         print("✅ Ad metadata already exists, skipping processing")
     else:
@@ -82,8 +106,8 @@ def main():
         if not run_ad_processing():
             success = False
 
-    # Step 3: Check and run database loading
-    print("\n💾 Step 3: Database Loading")
+    # Step 4: Check and run database loading
+    print("\n💾 Step 4: Database Loading")
     if check_chroma_db_exists():
         print("✅ Chroma database already exists, skipping loading")
     else:
@@ -91,8 +115,8 @@ def main():
         if not run_database_loading():
             success = False
 
-    # Step 4: Instructions for starting backend API
-    print("\n🌐 Step 4: Backend API")
+    # Step 5: Instructions for starting backend API
+    print("\n🌐 Step 5: Backend API")
     if success:
         print("✅ All components ready!")
         start_backend()

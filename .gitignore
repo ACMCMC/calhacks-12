@@ -1,5 +1,8 @@
 .conda/
 .github/
+data/
+models/
+chroma_db/
 
 
 # Python

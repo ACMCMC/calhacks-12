@@ -4,12 +4,16 @@ FastAPI application providing ad serving and search endpoints.
 """
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import numpy as np
 import chromadb
 import os
 from pathlib import Path
+import joblib
+import json
 
 # Import our core modules
 from privads_core import PrivAdsCore
@@ -21,11 +25,44 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Initialize core components
 core = PrivAdsCore()
 
 # Initialize Chroma client
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
+try:
+    chroma_client = chromadb.PersistentClient(path="./chroma_db")
+    print("✓ ChromaDB initialized")
+except Exception as e:
+    print(f"⚠ ChromaDB initialization failed: {e}")
+    chroma_client = None
+
+# Load ML model for click prediction
+try:
+    model_path = Path("../models/click_predictor.pkl")
+    scaler_path = Path("../models/feature_scaler.pkl")
+    features_path = Path("../models/feature_names.json")
+    
+    click_model = joblib.load(model_path)
+    feature_scaler = joblib.load(scaler_path)
+    
+    with open(features_path, 'r') as f:
+        feature_names = json.load(f)
+        
+    print(f"Loaded click prediction model with {len(feature_names)} features: {feature_names}")
+except Exception as e:
+    print(f"Warning: Could not load click prediction model: {e}")
+    click_model = None
+    feature_scaler = None
+    feature_names = []
 
 class AdRequest(BaseModel):
     user_id: str
@@ -49,6 +86,20 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     results: List[SearchResult]
+
+class ClickPredictionRequest(BaseModel):
+    features: Dict[str, float]
+
+class ClickPredictionResponse(BaseModel):
+    probability: float
+    features_used: List[str]
+
+class ClickPredictionRequest(BaseModel):
+    features: Dict[str, float]
+
+class ClickPredictionResponse(BaseModel):
+    probability: float
+    features_used: List[str]
 
 @app.post("/get_ad", response_model=AdResponse)
 async def get_ad(request: AdRequest):
@@ -122,10 +173,22 @@ async def search_ads(request: SearchRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
 
-@app.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "Project Aura Backend"}
+@app.get("/model/interaction_predictor.onnx")
+async def get_onnx_model():
+    """Serve the ONNX model file with correct MIME type"""
+    model_path = Path("../models/interaction_predictor.onnx")
+    if not model_path.exists():
+        raise HTTPException(status_code=404, detail="Model file not found")
+
+    def file_generator():
+        with open(model_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        file_generator(),
+        media_type="application/wasm",
+        headers={"Content-Disposition": "attachment; filename=interaction_predictor.onnx"}
+    )
 
 if __name__ == "__main__":
     import uvicorn
