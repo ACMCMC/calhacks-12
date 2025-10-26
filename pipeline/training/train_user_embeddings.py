@@ -231,6 +231,9 @@ if __name__ == "__main__":
         if all(u1 not in ad_to_users[a] or u2 not in ad_to_users[a] for a in ad_ids):
             user_user_neg.append((user_id_to_idx[u1], user_id_to_idx[u2]))
 
+    # Print counts for imbalance check
+    print(f"#pos_ad_pairs: {len(pos_ad_pairs)}  #neg_ad_pairs: {len(neg_ad_pairs)}  #user_user_pos: {len(user_user_pos)}  #user_user_neg: {len(user_user_neg)}")
+
     # Training loop
     epochs = 10
     for epoch in range(epochs):
@@ -248,14 +251,16 @@ if __name__ == "__main__":
                 p_a = projector(a_emb.unsqueeze(0)).squeeze(0)
                 pos_sim = torch.dot(u, p_a)
                 neg_sim = torch.dot(user_emb[neg_u_idx], projector(neg_a_emb.unsqueeze(0)).squeeze(0))
-                ad_loss = -torch.log(torch.exp(pos_sim) / (torch.exp(pos_sim) + torch.exp(neg_sim)))
+                # Improved loss: margin ranking loss
+                margin = 0.2
+                ad_loss = torch.relu(margin - pos_sim + neg_sim)
                 # User-user InfoNCE
                 if i < min(len(user_user_pos), len(user_user_neg)):
                     uu1, uu2 = user_user_pos[i]
                     nu1, nu2 = user_user_neg[i]
                     uu_pos_sim = torch.dot(user_emb[uu1], user_emb[uu2])
                     uu_neg_sim = torch.dot(user_emb[nu1], user_emb[nu2])
-                    uu_loss = -torch.log(torch.exp(uu_pos_sim) / (torch.exp(uu_pos_sim) + torch.exp(uu_neg_sim)))
+                    uu_loss = torch.relu(margin - uu_pos_sim + uu_neg_sim)
                 else:
                     uu_loss = 0.0
                 loss = ad_loss + uu_loss
@@ -267,7 +272,7 @@ if __name__ == "__main__":
                 t.set_postfix(loss=loss.item(), avg_loss=np.mean(losses))
                 t.update(1)
                 # Evaluation metrics every 100 steps
-                if (i+1) % 100 == 0:
+                if (i+1) % 500 == 0:
                     with torch.no_grad():
                         from sklearn.metrics import roc_auc_score
                         cos_sims = []

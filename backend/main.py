@@ -6,6 +6,7 @@ FastAPI application providing ad serving and search endpoints.
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from groq import Groq
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import numpy as np
@@ -19,6 +20,9 @@ import sys
 # Import our core modules
 from privads_core import PrivAdsCore
 from elastic_search import search_ads_elastic
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(
     title="PrivAds API",
@@ -398,6 +402,48 @@ async def get_onnx_model():
             "Access-Control-Allow-Headers": "*"
         }
     )
+
+class AdDescriptionRequest(BaseModel):
+    image_url: str
+    text: Optional[str] = None
+
+class AdDescriptionResponse(BaseModel):
+    description: str
+    web_search_keywords: List[str]
+
+@app.post("/extract_ad_description", response_model=AdDescriptionResponse)
+def extract_ad_description(req: AdDescriptionRequest):
+    try:
+        client = Groq(api_key=os.environ["GROQ_API_KEY"])
+        prompt = (
+            "You are an expert ad analyst. Given an ad image (and any visible text), do the following:\n"
+            "1. Write a concise, human-readable description of the ad.\n"
+            "2. Decide if a web search would provide important extra context (e.g., if the ad references a product, event, or brand that could be researched online). If so, suggest a list of search keywords; otherwise, leave the list empty.\n\n"
+            "Respond in this JSON format:\n"
+            "{\n  \"description\": \"...\",\n  \"web_search_keywords\": [...]\n}"
+        )
+        content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": req.image_url}}
+        ]
+        if req.text:
+            content.append({"type": "text", "text": req.text})
+        completion = client.chat.completions.create(
+            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            messages=[{"role": "user", "content": content}],
+            temperature=1,
+            max_completion_tokens=1024,
+            top_p=1,
+            stream=False,
+            response_format={"type": "json_object"},
+            stop=None
+        )
+        import json
+        result = completion.choices[0].message.content
+        return json.loads(result)
+    except Exception:
+        return {"description": "", "web_search_keywords": []}
+
 
 if __name__ == "__main__":
     import uvicorn

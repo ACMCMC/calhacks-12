@@ -104,12 +104,13 @@ class GeminiAdCustomizer:
     def _customize_with_gemini_http(self, ad_text: str, page_type: str, keywords: List[str], page_title: str) -> str:
         """Use Gemini API via direct HTTP request."""
         keywords_str = ', '.join(keywords[:5]) if keywords else 'your needs'
-        
-        prompt = f"""You are an expert copywriter. Create a short, compelling ad (2-3 sentences) that:
+
+        prompt = f"""You are an expert copywriter. You are given an ad description and you need to create some customized ad copy to be included in a website when a specific user you're writing for comes and visits the website. Create a short, compelling ad (2-3 sentences) that:
 1. Mentions the core value: {ad_text}
 2. Relates to this page: {page_title}
 3. Incorporates these keywords naturally: {keywords_str}
 4. Matches the tone for a {page_type} page
+5. Appeals to a user that would be interested in this page.
 
 Return ONLY the ad text, nothing else."""
         

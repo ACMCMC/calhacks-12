@@ -170,7 +170,7 @@ function App() {
     <PrivAdsProvider>
       <Router>
         <div className="App">
-          {/* <AdPredictionBar /> */}
+          <AdPredictionBar />
           {/* <Navigation /> */}
           <main className="main-content">
             <Routes>

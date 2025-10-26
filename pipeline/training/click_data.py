@@ -14,7 +14,7 @@ class RealClickDataQuantile(ClickDataSource):
     Loads real click data from a CSV with click_probability, binarizing clicks at a given quantile threshold.
     Expects columns: persona_id, ad_id, click_probability
     """
-    def __init__(self, data_path: str, quantile: float = 0.85):
+    def __init__(self, data_path: str, quantile: float = 0.7):
         df = pd.read_csv(data_path)
         threshold = df["click_probability"].quantile(quantile)
         df["clicked"] = (df["click_probability"] > threshold).astype(int)
