@@ -57,3 +57,5 @@ data/images/
 # Logs
 *.log
 wandb/
+
+/ad_creatives
