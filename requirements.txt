@@ -65,3 +65,4 @@ flake8>=6.0.0
 # Utilities
 pathlib2>=2.3.7
 skl2onnx
+datasets

@@ -18,6 +18,7 @@ import time
 from dotenv import load_dotenv
 import pandas as pd
 import random
+from datasets import load_dataset
 
 # Load environment variables from .env file
 load_dotenv()
@@ -380,109 +381,47 @@ class BrightDataScraper:
             return []
 
     def _create_mock_data(self, target_urls: List[str], output_dir: str) -> Dict[str, Any]:
-        """Create mock data when Bright Data is not available. Uses the ads from hugging face"""
-        print("🔧 setting up the hugging face ads (100) if (Bright Data not configured)")
+        """Create mock data using HuggingFace datasets library (AdImageNet)."""
+        print("🔧 Setting up the Hugging Face ads (100) using datasets library")
 
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
 
-        # Try to extract images from HuggingFace parquet file first
-        parquet_path = "huggingFaceAdImageNet.parquet"
-        if os.path.exists(parquet_path):
-            print("Found HuggingFace adImageNet parquet file, extracting real ad images...")
-            extracted_ads = self._extract_images_from_parquet(parquet_path, output_path, MAX_AD_IMAGES)
-            
-            if extracted_ads:
-                metadata = {
-                    'ads': extracted_ads,
-                    'metadata': {
-                        'total_scraped': len(extracted_ads),
-                        'sources': target_urls,
-                        'mock_data': False,
-                        'data_source': 'huggingface_adimagenet'
-                    }
-                }
-                
-                metadata_file = output_path / "scraped_metadata.json"
-                with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)
-                
-                return metadata
-            else:
-                print("Failed to extract images from parquet file")
-                print("No ad images available - please check the parquet file format")
-                return {
-                    'ads': [],
-                    'metadata': {
-                        'total_scraped': 0,
-                        'sources': target_urls,
-                        'mock_data': False,
-                        'error': 'Failed to extract images from parquet file'
-                    }
-                }
-        else:
-            print(f"HuggingFace parquet file not found at {parquet_path}")
-            print("No ad images available - please ensure huggingFaceAdImageNet.parquet is in the project root")
-            return {
-                'ads': [],
-                'metadata': {
-                    'total_scraped': 0,
-                    'sources': target_urls,
-                    'mock_data': False,
-                    'error': 'No HuggingFace parquet file found'
-                }
-            }
+        # Download AdImageNet from HuggingFace
+        dataset = load_dataset("PeterBrendan/AdImageNet", split="train[:100]")
+        print(f"Loaded {len(dataset)} ads from HuggingFace AdImageNet")
 
-        # Commented out: Original mock data creation with placeholder images
-        # Since we're now using HuggingFace images, this fallback is no longer needed
-        # 
-        # mock_ads = [
-        #     {
-        #         'id': 'mock_ad_001',
-        #         'description': 'Sustainable children\'s clothing, eco-friendly',
-        #         'source_url': 'https://example.com/kids-clothing'
-        #     },
-        #     {
-        #         'id': 'mock_ad_002',
-        #         'description': 'Luxury watch, premium quality, expensive',
-        #         'source_url': 'https://example.com/watches'
-        #     },
-        #     {
-        #         'id': 'mock_ad_003',
-        #         'description': 'Affordable kids toys, colorful, fun',
-        #         'source_url': 'https://example.com/toys'
-        #     },
-        #     {
-        #         'id': 'mock_ad_004',
-        #         'description': 'Organic food delivery, healthy meals',
-        #         'source_url': 'https://example.com/food-delivery'
-        #     },
-        #     {
-        #         'id': 'mock_ad_005',
-        #         'description': 'Gaming laptop, high performance',
-        #         'source_url': 'https://example.com/laptops'
-        #     }
-        # ]
-        #
-        # # Create placeholder images
-        # for ad in mock_ads:
-        #     ad_path = output_path / f"{ad['id']}.jpg"
-        #     self._create_placeholder_image(ad_path, ad['id'])
-        #
-        # metadata = {
-        #     'ads': mock_ads,
-        #     'metadata': {
-        #         'total_scraped': len(mock_ads),
-        #         'sources': target_urls,
-        #         'mock_data': True
-        #     }
-        # }
-        #
-        # metadata_file = output_path / "scraped_metadata.json"
-        # with open(metadata_file, 'w') as f:
-        #     json.dump(metadata, f, indent=2)
-        #
-        # return metadata
+        extracted_ads = []
+        for i, row in enumerate(dataset):
+            ad_id = f"hf_ad_{i:06d}"
+            image = row['image']
+            if image.mode in ("RGBA", "P"):
+                image = image.convert("RGB")
+            image_path = output_path / f"{ad_id}.jpg"
+            image.save(image_path)
+            description = row.get('caption') or row.get('text') or row.get('description') or f"Ad image {i}"
+            ad_data = {
+                'id': ad_id,
+                'description': description,
+                'source_url': f"huggingface_dataset_row_{i}",
+                'local_path': str(image_path),
+                'dataset_source': 'huggingface_adimagenet'
+            }
+            extracted_ads.append(ad_data)
+
+        metadata = {
+            'ads': extracted_ads,
+            'metadata': {
+                'total_scraped': len(extracted_ads),
+                'sources': target_urls,
+                'mock_data': False,
+                'data_source': 'huggingface_adimagenet'
+            }
+        }
+        metadata_file = output_path / "scraped_metadata.json"
+        with open(metadata_file, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        return metadata
 
     def _create_placeholder_image(self, path: Path, text: str):
         """Create a simple placeholder image."""
