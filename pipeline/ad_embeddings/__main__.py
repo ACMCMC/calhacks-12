@@ -1,13 +1,28 @@
 # Orchestrate the ad embedding pipeline
 import subprocess
+import sys
+from pathlib import Path
 
-print("[1/3] Generating ad embeddings...")
-subprocess.run(["python", "pipeline/ad_embeddings/generate_ad_embeddings.py"], check=True)
+def run_step(cmd, desc):
+    print(f"\n=== {desc} ===")
+    result = subprocess.run(cmd, shell=True)
+    if result.returncode != 0:
+        print(f"Step failed: {desc}")
+        sys.exit(1)
 
-print("[2/3] Building user co-click graph...")
-subprocess.run(["python", "pipeline/ad_embeddings/train_user_embeddings.py"], check=True)
+# 1. Generate ad embeddings if not present
+if not Path("data/ad_embeddings_raw.npz").exists():
+    run_step("python -m pipeline.ad_embeddings.generate_ad_embeddings", "Generating ad embeddings")
+else:
+    print("ad_embeddings_raw.npz already exists, skipping embedding generation.")
 
-print("[3/3] Training projector (stub)...")
-subprocess.run(["python", "pipeline/ad_embeddings/train_projector.py"], check=True)
+# 2. Build user co-click graph if not present
+if not Path("data/user_graph.npz").exists():
+    run_step("python -m pipeline.ad_embeddings.train_user_embeddings", "Building user co-click graph")
+else:
+    print("user_graph.npz already exists, skipping user graph.")
 
-print("Pipeline complete.")
+# 3. Train projector
+run_step("python -m pipeline.ad_embeddings.train_projector", "Training projector")
+
+print("\nPipeline complete.")

@@ -67,17 +67,20 @@ class AdEncoder:
 
         # Forward pass
         outputs = self.model(**inputs)
+        # Extract embeddings
+        image_emb = outputs["image_embeds"][0].to(torch.float32).cpu() if "image_embeds" in outputs else None
+        text_emb = outputs["text_embeds"][0].to(torch.float32).cpu() if "text_embeds" in outputs else None
 
-        # Get embeddings (pooler_output for Jina CLIP)
-        if hasattr(outputs, 'pooler_output'):
-            embedding = outputs.pooler_output[0].cpu().numpy()
+        if image_emb is not None and text_emb is not None:
+            embedding = torch.cat([image_emb, text_emb])
+        elif image_emb is not None:
+            embedding = image_emb
+        elif text_emb is not None:
+            embedding = text_emb
         else:
-            # Fallback: mean pool the last hidden state
-            embedding = outputs.last_hidden_state[0].mean(dim=0).cpu().numpy()
-
+            raise ValueError("No image or text embedding produced by model.")
         # L2 normalize
-        embedding = embedding / np.linalg.norm(embedding)
-
+        embedding = embedding / embedding.norm()
         return embedding
 
     def encode_batch(self, texts: list, image_paths: Optional[list] = None) -> np.ndarray:

@@ -18,7 +18,7 @@ ad_matrix = np.stack([ad_embeddings[aid] for aid in ad_id_list])
 ad_id_to_idx = {aid: i for i, aid in enumerate(ad_id_list)}
 
 # Projector
-projector = Projector(d_ad=1024, d_user=128)
+projector = Projector(d_ad=2048, d_user=128)
 projector.train()
 opt = torch.optim.AdamW(projector.parameters(), lr=1e-3)
 

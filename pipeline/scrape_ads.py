@@ -24,7 +24,7 @@ from datasets import load_dataset
 load_dotenv()
 
 # Configuration for ad image extraction
-MAX_AD_IMAGES = 100  # Maximum number of images to extract from HuggingFace dataset
+MAX_AD_IMAGES = None  # Maximum number of images to extract from HuggingFace dataset
 
 import os
 import requests
@@ -382,13 +382,13 @@ class BrightDataScraper:
 
     def _create_mock_data(self, target_urls: List[str], output_dir: str) -> Dict[str, Any]:
         """Create mock data using HuggingFace datasets library (AdImageNet)."""
-        print("🔧 Setting up the Hugging Face ads (100) using datasets library")
+        print("🔧 Setting up the Hugging Face ads using datasets library")
 
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
 
         # Download AdImageNet from HuggingFace
-        dataset = load_dataset("PeterBrendan/AdImageNet", split="train[:100]")
+        dataset = load_dataset("PeterBrendan/AdImageNet", split="train")
         print(f"Loaded {len(dataset)} ads from HuggingFace AdImageNet")
 
         extracted_ads = []
