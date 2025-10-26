@@ -7,6 +7,8 @@
   box-shadow: none;
   border-radius: 0;
   opacity: 1;
+  background: #000;
+  color: #fff;
 }
 
 body {
@@ -15,12 +17,14 @@ body {
 
 .prediction-header {
   padding: 12px 20px;
+  color: #fff;
 }
 
 .prediction-main {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  color: #fff;
 }
 
 .prediction-score {
@@ -40,22 +44,27 @@ body {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  background: #111;
+  color: #fff;
 }
 
 .score-value {
   font-size: 16px;
   line-height: 1;
+  color: #fff;
 }
 
 .score-label {
   font-size: 9px;
   opacity: 0.8;
   margin-top: 1px;
+  color: #fff;
 }
 
 .prediction-meta {
   display: flex;
   gap: 16px;
+  color: #fff;
 }
 
 .meta-item {
@@ -63,6 +72,7 @@ body {
   align-items: center;
   gap: 6px;
   font-size: 12px;
+  color: #fff;
 }
 
 .prediction-factors {
@@ -70,7 +80,7 @@ body {
   display: flex;
   gap: 20px;
   justify-content: space-between;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0,0,0,0.85);
 }
 
 .factor-item {
@@ -79,6 +89,7 @@ body {
   border-radius: 0;
   box-shadow: none;
   opacity: 1;
+  color: #fff;
 }
 
 .factor-header {
@@ -86,6 +97,7 @@ body {
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  color: #fff;
 }
 
 .factor-header svg {
@@ -99,29 +111,35 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: #fff;
 }
 
 .factor-value {
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
+  color: #fff;
 }
 
 .factor-bar {
   height: 3px;
   border-radius: 2px;
   overflow: hidden;
+  background: #222;
 }
 
 .factor-fill {
   height: 100%;
   border-radius: 2px;
   transition: width 0.3s ease;
+  background: linear-gradient(90deg, #00fff7, #00ff85, #00bfff, #ff00ea);
+  box-shadow: 0 0 8px 2px #00fff7, 0 0 8px 2px #00ff85, 0 0 8px 2px #00bfff, 0 0 8px 2px #ff00ea;
 }
 
 .prediction-footer {
   padding: 6px 20px;
   text-align: center;
+  color: #fff;
 }
 
 .live-indicator {

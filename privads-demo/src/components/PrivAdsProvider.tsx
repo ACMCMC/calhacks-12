@@ -237,6 +237,9 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     }
   }, [interactionFeatures, currentPrediction, updatePrediction, isMlReady, mlPredictor]);
 
+  // --- Track true session start time ---
+  const [sessionStartTime] = useState(() => Date.now() / 1000);
+
   // --- Real-time sliding window update ---
   useEffect(() => {
     const interval = setInterval(() => {
@@ -253,12 +256,12 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     const now = Date.now() / 1000;
     const windowSize = 10;
     const windowStart = now - windowSize;
-    const features = computeSlidingWindowFeatures(actionHistory, windowStart, now);
+    const features = computeSlidingWindowFeatures(actionHistory, windowStart, now, sessionStartTime);
     if (features) {
       setInteractionFeatures(features);
       updatePredictionFromML();
     }
-  }, [actionHistory]);
+  }, [actionHistory, sessionStartTime]);
 
   // --- Track interaction by pushing to action history ---
   const trackInteraction = useCallback((interactionType: string, details?: any) => {
@@ -313,7 +316,8 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
   function computeSlidingWindowFeatures(
     actionHistory: UserAction[],
     windowStart: number,
-    windowEnd: number
+    windowEnd: number,
+    sessionStart: number
   ): SlidingWindowFeatures | null {
     // Clamp window to not exceed current time
     const timeNow = Date.now() / 1000;
@@ -334,7 +338,8 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     } else {
       avgTimeBetweenActions = windowEnd - windowStart;
     }
-    const sessionDuration = windowEnd - (actionHistory.length > 0 ? actionHistory[0].timestamp : windowEnd);
+    // Use true session start
+    const sessionDuration = windowEnd - sessionStart;
 
     // Count actions (normalized by window size)
     const actionCounts: Record<string, number> = {
