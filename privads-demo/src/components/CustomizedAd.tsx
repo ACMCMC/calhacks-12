@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import './CustomizedAd.css';
 
+const AD_SERVICE_BASE_URL = 
+  process.env.REACT_APP_AD_SERVICE_URL || 'http://localhost:8002';
+
 interface PageContext {
   title: string;
   content: string;
