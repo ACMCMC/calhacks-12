@@ -33,7 +33,12 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8002", "*"],  # Frontend URLs + Web Ad Service
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        os.environ.get("AD_CUSTOMIZATION_BACKEND_SERVER_URL", "http://localhost:8002"),
+        "*"
+    ],  # Frontend URLs + Web Ad Service
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

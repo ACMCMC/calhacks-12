@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interaction Prediction Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/ort.min.js"></script>
+</head>
+<body>
+    <h1>Interaction Prediction Demo</h1>
+    <div id="status">Loading...</div>
+    <div id="prediction">Prediction: --</div>
+
+    <script src="interaction_predictor.js"></script>
+    <script>
+        const predictor = new InteractionPredictor();
+
+        async function init() {
+            try {
+                await predictor.initialize();
+                document.getElementById('status').textContent = 'Model loaded successfully!';
+
+                // Test with sample features
+                const sampleFeatures = {
+                    time_since_last_action: 2.5,
+                    avg_time_between_actions: 3.2,
+                    session_duration: 45.0,
+                    scroll_down_count: 0.15,
+                    scroll_up_count: 0.05,
+                    click_count: 0.08,
+                    hover_count: 0.12,
+                    blur_count: 0.02,
+                    focus_count: 0.03,
+                    wait_count: 0.10,
+                    close_tab_count: 0.001,
+                    scroll_depth_max: 0.8,
+                    interaction_density: 0.25,
+                    attention_score: 0.75,
+                    scroll_velocity_avg: 0.15,
+                    click_to_hover_ratio: 0.67,
+                    blur_frequency: 0.02,
+                    action_entropy: 1.8,
+                    burstiness_score: 0.9,
+                    engagement_rhythm: 0.3
+                };
+
+                const probability = await predictor.predictClickProbability(sampleFeatures);
+                document.getElementById('prediction').textContent =
+                    `Prediction: ${(probability * 100).toFixed(2)}% click probability`;
+
+            } catch (error) {
+                document.getElementById('status').textContent = `Error: ${error.message}`;
+                console.error(error);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,9 +1,11 @@
 .conda/
 .github/
 data/
-models/
+*.pt
+*.npy
 chroma_db/
 .env
+*.pkl
 
 
 # Python

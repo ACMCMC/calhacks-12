@@ -81,12 +81,15 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
     const initializePredictor = async () => {
       try {
         // Load ONNX model from backend API (avoids CORS and MIME-type issues)
-        const modelUrl = 'http://localhost:8000/model/interaction_predictor.onnx';        const response = await fetch(modelUrl);
+        const backendUrl = process.env.MAIN_BACKEND_SERVER_URL || 'http://localhost:8000';
+        const modelUrl = `${backendUrl}/model/interaction_predictor.onnx`;
+        const response = await fetch(modelUrl);
         if (!response.ok) {
           throw new Error(`Failed to load ONNX model from ${modelUrl} (status=${response.status})`);
         }
 
-        const modelBuffer = await response.arrayBuffer();        // Create session using the CPU execution provider to avoid loading the
+        const modelBuffer = await response.arrayBuffer();
+        // Create session using the CPU execution provider to avoid loading the
         // wasm backend (which requires a .wasm runtime file and correct MIME types).
         const session = await window.ort.InferenceSession.create(modelBuffer, {
           executionProviders: ['cpu'],
@@ -131,7 +134,8 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
 
   const getAdRecommendation = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:8000/get_ad', {
+  const backendUrl = process.env.MAIN_BACKEND_SERVER_URL || 'http://localhost:8000';
+  const response = await fetch(`${backendUrl}/get_ad`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -159,7 +163,8 @@ export const PrivAdsProvider: React.FC<PrivAdsProviderProps> = ({ children }) =>
 
   const searchAds = useCallback(async (query: string) => {
     try {
-      const response = await fetch('http://localhost:8000/search_ads', {
+      const backendUrl = process.env.MAIN_BACKEND_SERVER_URL || 'http://localhost:8000';
+      const response = await fetch(`${backendUrl}/search_ads`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

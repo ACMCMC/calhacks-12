@@ -5,7 +5,7 @@ Trains logistic regression model with polynomial features on synthetic interacti
 
 import numpy as np
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -36,7 +36,7 @@ class InteractionModelTrainer:
         # Model pipeline
         self.model = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', LogisticRegression(random_state=random_seed, max_iter=1000, class_weight='balanced'))
+            ('classifier', RandomForestClassifier(random_state=random_seed, n_estimators=100, class_weight='balanced'))
         ])
 
         self.is_trained = False
