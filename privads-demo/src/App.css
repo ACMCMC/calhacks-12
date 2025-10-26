@@ -6,9 +6,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #f8fafc;
-  color: #374151;
+  font-family: 'Inter', 'Segoe UI', Arial, Helvetica, sans-serif;
+  background: #f7f8fa;
+  color: #23272f;
   line-height: 1.6;
 }
 
@@ -17,29 +17,29 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  background: white;
   border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  box-shadow: none;
   z-index: 100;
 }
 
 .header-content {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 70px;
+  height: 64px;
 }
 
 .logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 700;
-  font-size: 1.25rem;
-  color: #1e293b;
+  font-size: 1.2rem;
+  color: #23272f;
   text-decoration: none;
 }
 
@@ -50,6 +50,13 @@ body {
 .site-navigation {
   display: flex;
   gap: 8px;
+  background: #f7f8fa;
+  border-bottom: 1px solid #e5e7eb;
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  z-index: 50;
 }
 
 .nav-link {
@@ -57,32 +64,30 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 0;
   text-decoration: none;
   color: #6b7280;
   font-weight: 500;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
+  background: none;
+  transition: background 0.2s, color 0.2s;
+  font-size: 0.95rem;
+  border: none;
 }
 
-.nav-link:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.nav-link svg {
-  opacity: 0.7;
+.nav-link:hover, .nav-link.active {
+  background: #f0f1f3;
+  color: #23272f;
 }
 
 .main-content {
-  margin-top: 180px; /* Account for fixed top bar + navigation */
-  min-height: calc(100vh - 180px);
+  margin-top: 140px; /* Account for fixed top bar + navigation */
+  min-height: calc(100vh - 140px);
 }
 
 /* Navigation styles */
 .site-navigation {
   position: fixed;
-  top: 120px; /* Below the prediction bar */
+  top: 64px; /* Below the prediction bar */
   left: 0;
   right: 0;
   background: rgba(255, 255, 255, 0.95);
@@ -92,7 +97,7 @@ body {
 }
 
 .nav-container {
-  max-width: 1400px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 20px;
   display: flex;
@@ -126,13 +131,14 @@ body {
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 0;
   text-decoration: none;
   color: #6b7280;
   font-weight: 500;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
-  border: 2px solid transparent;
+  background: none;
+  transition: background 0.2s, color 0.2s;
+  font-size: 0.95rem;
+  border: none;
 }
 
 .nav-link:hover {
@@ -153,78 +159,78 @@ body {
 
 /* Home page styles */
 .home-page {
-  max-width: 1200px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 60px 20px;
+  padding: 48px 16px;
   text-align: center;
 }
 
 .hero {
-  margin-bottom: 60px;
+  margin-bottom: 48px;
 }
 
 .hero h1 {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 800;
-  color: #1e293b;
-  margin-bottom: 16px;
+  color: #23272f;
+  margin-bottom: 12px;
   line-height: 1.1;
+  font-family: 'Inter', 'Segoe UI', Arial, Helvetica, sans-serif;
 }
 
 .hero p {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: #6b7280;
-  max-width: 600px;
+  max-width: 520px;
   margin: 0 auto;
   line-height: 1.6;
 }
 
 .websites-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-  margin-bottom: 80px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 24px;
+  margin-bottom: 60px;
 }
 
 .website-card {
-  padding: 32px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 24px;
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
   border: 1px solid #e5e7eb;
-  transition: all 0.3s ease;
+  transition: border 0.2s;
   text-decoration: none;
   color: inherit;
   display: block;
 }
 
 .website-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
   border-color: #3b82f6;
 }
 
 .website-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 20px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #fff;
+  background: #3b82f6;
 }
 
 .website-card h3 {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 8px;
+  color: #23272f;
+  margin-bottom: 6px;
 }
 
 .website-card p {
   color: #6b7280;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   line-height: 1.5;
 }
 
@@ -240,25 +246,25 @@ body {
 }
 
 .demo-info {
-  background: white;
-  border-radius: 16px;
-  padding: 48px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  background: #fff;
+  border-radius: 0;
+  padding: 32px;
+  box-shadow: none;
   border: 1px solid #e5e7eb;
 }
 
 .demo-info h2 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 16px;
+  color: #23272f;
+  margin-bottom: 12px;
 }
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 32px;
-  margin-top: 32px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px;
+  margin-top: 24px;
 }
 
 .info-item {
@@ -266,10 +272,10 @@ body {
 }
 
 .info-item h4 {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 8px;
+  color: #23272f;
+  margin-bottom: 6px;
 }
 
 .info-item p {
@@ -279,46 +285,27 @@ body {
 
 /* Responsive design */
 @media (max-width: 768px) {
-  .nav-container {
+  .header-content {
     flex-direction: column;
     height: auto;
-    padding: 16px 20px;
-    gap: 16px;
+    padding: 12px 10px;
+    gap: 10px;
   }
-
-  .nav-links {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
+  .main-content {
+    margin-top: 180px;
   }
-
-  .hero h1 {
-    font-size: 2.5rem;
-  }
-
-  .hero p {
-    font-size: 1.1rem;
-  }
-
   .websites-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 16px;
   }
-
   .website-card {
-    padding: 24px;
+    padding: 16px;
   }
-
   .info-grid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: 16px;
   }
-
   .demo-info {
-    padding: 32px 24px;
-  }
-
-  .main-content {
-    margin-top: 200px; /* Adjust for mobile navigation */
+    padding: 20px 10px;
   }
 }

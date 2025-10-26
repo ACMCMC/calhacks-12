@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from tqdm import tqdm
 
 
 @dataclass
@@ -129,49 +130,41 @@ class SyntheticInteractionGenerator:
         # Normalize to ensure they sum to 1
         return probs / probs.sum()
 
-    def generate_interaction_sequence(self, profile: str, max_length: int = 300) -> List[InteractionAction]:
-        """Generate a sequence of user interactions for a given profile"""
+    def generate_interaction_sequence(self, profile: str, max_length: int = 150) -> List[InteractionAction]:
+        """Generate a sequence of user interactions for a given profile (tuned for realistic, fast sessions)"""
         sequence = []
         current_time = 0.0
 
-        # Sample session length (in seconds)
-        session_length = self.sample_beta(self.PROFILES[profile]['session_length']) * 240  # Scale to 0-4 minutes
-        session_length = max(10, min(session_length, 300))  # Clamp to reasonable range
+        session_length = self.sample_beta(self.PROFILES[profile]['session_length']) * 28 + 2  # 2–30s
+        session_length = max(2, min(session_length, 40))  # Clamp to 2–40s
 
         while current_time < session_length and len(sequence) < max_length:
-            # Get action probabilities based on current state
             time_since_last = current_time - sequence[-1].timestamp if sequence else 0
             action_probs = self.get_action_probabilities(profile, time_since_last)
-
-            # Sample next action
             action_idx = np.random.choice(len(self.ACTIONS), p=action_probs)
             action = self.ACTIONS[action_idx]
 
-            # Sample time to next action based on profile
             if action == 'wait':
-                # Wait actions are longer
-                time_increment = self.sample_beta({'alpha': 2, 'beta': 1}) * 15  # 0-30 seconds
+                time_increment = self.sample_beta({'alpha': 2, 'beta': 1}) * 1.5  # 0–3s
             else:
-                # Regular actions
-                interaction_freq = self.sample_beta(self.PROFILES[profile]['interaction_freq'])
-                time_increment = np.random.exponential(1 / interaction_freq)  # Exponential distribution
+                interaction_freq = self.sample_beta(self.PROFILES[profile]['interaction_freq']) * 6 + 6  # 6–12 Hz
+                time_increment = np.random.exponential(1 / interaction_freq)
 
-            time_increment = max(0.1, min(time_increment, 30))  # Clamp to reasonable range
+            time_increment = max(0.02, min(time_increment, 2.0))
             current_time += time_increment
 
-            # Create action details based on action type
             details = {}
             if action in ['scroll_down', 'scroll_up']:
                 if self.PROFILES[profile]['scroll_pattern'] == 'rapid':
-                    details['scroll_amount'] = np.random.uniform(0.1, 0.5)
+                    details['scroll_amount'] = np.random.uniform(0.2, 1.0)
                 elif self.PROFILES[profile]['scroll_pattern'] == 'gradual':
-                    details['scroll_amount'] = np.random.uniform(0.05, 0.2)
-                else:  # erratic
-                    details['scroll_amount'] = np.random.uniform(0.02, 0.8)
+                    details['scroll_amount'] = np.random.uniform(0.1, 0.5)
+                else:
+                    details['scroll_amount'] = np.random.uniform(0.05, 1.2)
             elif action == 'click':
                 details['element_type'] = np.random.choice(['link', 'button', 'image', 'text'])
             elif action == 'hover':
-                details['hover_duration'] = np.random.exponential(2)  # 0-10 seconds
+                details['hover_duration'] = np.random.exponential(1)  # 0–5s
 
             sequence.append(InteractionAction(
                 action=action,
@@ -182,18 +175,15 @@ class SyntheticInteractionGenerator:
         return sequence
 
     def generate_training_samples(self, n_samples: int = 10000) -> List[Dict[str, Any]]:
-        """Generate training samples with sequences and labels"""
+        """Generate training samples with sequences and labels (10k samples, 150 actions per session)"""
         training_samples = []
 
-        for i in range(n_samples):
-            if i % 1000 == 0:
-                print(f"Generated {i}/{n_samples} samples...")
-
+        for i in tqdm(range(n_samples), desc="Generating synthetic sessions"):
             # Sample user profile
             profile = np.random.choice(list(self.PROFILES.keys()))
 
             # Generate interaction sequence
-            sequence = self.generate_interaction_sequence(profile)
+            sequence = self.generate_interaction_sequence(profile, max_length=150)
 
             # Check if sequence contains ad click
             has_ad_click = any(action.action == 'click_ad' for action in sequence)
@@ -217,7 +207,7 @@ if __name__ == "__main__":
         sequence = generator.generate_interaction_sequence(profile, max_length=20)
         print(f"\n{profile.upper()}:")
         for action in sequence[:10]:  # Show first 10 actions
-            print(".1f")
+            print(f"  - {action.timestamp:.2f}s: {action.action} {action.details}")
         if len(sequence) > 10:
             print(f"  ... and {len(sequence) - 10} more actions")
 

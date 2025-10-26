@@ -206,12 +206,23 @@ class InteractionModelTrainer:
         plt.tight_layout()
         plt.show()
 
+    def print_feature_ranges(self, X: np.ndarray, feature_names: List[str]):
+        """Print min, max, mean, and std for each feature in the training set"""
+        import pandas as pd
+        df = pd.DataFrame(X, columns=feature_names)
+        print("\nFeature Ranges (min, max, mean, std):")
+        for col in feature_names:
+            print(f"{col:25s} min={df[col].min():.3f} max={df[col].max():.3f} mean={df[col].mean():.3f} std={df[col].std():.3f}")
+
     def run_full_pipeline(self, n_samples: int = 100000):
         """Run the complete training pipeline"""
         print("=== Starting Interaction Model Training Pipeline ===")
 
         # Generate training data
         X, y, profiles = self.generate_training_data(n_samples)
+
+        # Print feature ranges for analysis
+        self.print_feature_ranges(X, self.extractor.feature_names)
 
         # Cross-validation
         cv_results = self.cross_validate(X, y)
@@ -272,7 +283,7 @@ class InteractionModelTrainer:
 if __name__ == "__main__":
     # Run the full training pipeline
     trainer = InteractionModelTrainer()
-    results = trainer.run_full_pipeline(n_samples=100000)  # Start with smaller dataset for testing
+    results = trainer.run_full_pipeline(n_samples=10000)  # Start with smaller dataset for testing
 
     print("\nTraining Summary:")
     print(f"Cross-validation AUC: {results['cv_results']['cv_auc_mean']:.4f} ± {results['cv_results']['cv_auc_std']:.4f}")

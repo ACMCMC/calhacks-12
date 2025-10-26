@@ -54,8 +54,8 @@ class WindowFeatures:
 class SlidingWindowExtractor:
     """Extracts features from sliding windows of user interactions"""
 
-    WINDOW_SIZE = 120  # 2 minutes
-    WINDOW_STEP = 10   # 10 seconds between extractions
+    WINDOW_SIZE = 10  # 10 seconds
+    WINDOW_STEP = 1   # 1 second between extractions
     MIN_ACTIONS = 5    # Minimum actions needed for valid window
 
     def __init__(self):
