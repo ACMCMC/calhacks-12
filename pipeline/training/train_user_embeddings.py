@@ -50,7 +50,7 @@ class UserEmbeddings(nn.Module):
 def train_user_embeddings(
     clicks,
     n_users: int,
-    d_user: int = 128,
+    d_user: int = 512,
     epochs: int = 50,
     batch_size: int = 256,
     lr: float = 1e-3,
@@ -181,12 +181,12 @@ if __name__ == "__main__":
     ad_emb_dict = torch.load("data/ad_embeddings_raw.pt", weights_only=False)
 
     # Initialize user embeddings as a leaf Parameter
-    d_user = 128
+    d_user = 512
     user_emb = torch.nn.Parameter(torch.randn(len(user_ids), d_user))
     user_emb.data = user_emb.data / user_emb.data.norm(dim=1, keepdim=True)
 
     # Initialize projector
-    projector = Projector(d_ad=2048, d_user=128)
+    projector = Projector(d_ad=2048, d_user=512)
     projector.train()
     opt = torch.optim.Adam([user_emb] + list(projector.parameters()), lr=1e-2)
 
@@ -271,7 +271,7 @@ if __name__ == "__main__":
                     with torch.no_grad():
                         from sklearn.metrics import roc_auc_score
                         cos_sims = []
-                        recall_at_10 = []
+                        recall_at_100 = []
                         aucs = []
                         # Prepare all ad embeddings projected to user space
                         ad_keys = list(ad_emb_dict.keys())
@@ -289,14 +289,14 @@ if __name__ == "__main__":
                             p_a_eval = projector(a_emb_eval.unsqueeze(0)).squeeze(0)
                             sim = torch.nn.functional.cosine_similarity(u_eval, p_a_eval, dim=0).item()
                             cos_sims.append(sim)
-                            # Recall@10: does the true ad appear in top 10 for this user?
+                            # Recall@100: does the true ad appear in top 100 for this user?
                             sims = torch.matmul(ad_embs, u_eval)
-                            topk = torch.topk(sims, 10).indices.cpu().numpy()
+                            topk = torch.topk(sims, 100).indices.cpu().numpy()
                             true_ad_idx = ad_keys.index(f"hf_ad_{int(ad_ids[u_idx_eval]):06d}") if f"hf_ad_{int(ad_ids[u_idx_eval]):06d}" in ad_keys else None
                             if true_ad_idx is not None and true_ad_idx in topk:
-                                recall_at_10.append(1)
+                                recall_at_100.append(1)
                             else:
-                                recall_at_10.append(0)
+                                recall_at_100.append(0)
                             # AUC: true ad is positive, all others negative
                             if true_ad_idx is not None:
                                 labels = np.zeros(len(ad_keys), dtype=int)
@@ -308,10 +308,10 @@ if __name__ == "__main__":
                                     pass
                         mean_cos_sim = np.mean(cos_sims)
                         std_cos_sim = np.std(cos_sims)
-                        recall10 = np.mean(recall_at_10) if recall_at_10 else float('nan')
+                        recall100 = np.mean(recall_at_100) if recall_at_100 else float('nan')
                         auc_val = np.mean(aucs) if aucs else float('nan')
                         norms = user_emb.data.norm(dim=1).cpu().numpy()
-                        print(f"[Eval step {i+1}] mean_cos_sim={mean_cos_sim:.3f}, std_cos_sim={std_cos_sim:.3f}, recall@10={recall10:.3f}, auc={auc_val:.3f}, emb_norm_mean={norms.mean():.3f}, emb_norm_std={norms.std():.3f}")
+                        print(f"[Eval step {i+1}] mean_cos_sim={mean_cos_sim:.3f}, std_cos_sim={std_cos_sim:.3f}, recall@100={recall100:.3f}, auc={auc_val:.3f}, emb_norm_mean={norms.mean():.3f}, emb_norm_std={norms.std():.3f}")
         print(f"Epoch {epoch+1}: mean loss = {np.mean(losses):.4f}")
 
     # Save user embeddings

@@ -28,7 +28,7 @@ class ElasticSearchClient:
         try:
             payload = {
                 "query": query,
-                "agent_id": "aura_ad_search_agent"  # Would be configured in Kibana
+                "agent_id": "privads_ad_search_agent"  # Would be configured in Kibana
             }
 
             response = requests.post(

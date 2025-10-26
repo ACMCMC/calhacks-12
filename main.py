@@ -71,6 +71,26 @@ def start_backend():
     print("   cd backend && python main.py")
     print("   API will be available at: http://localhost:8000")
 
+def deploy_to_baseten(truss_dir, publish=False):
+    """
+    Deploy a Truss model to Baseten. If publish=True, deploys to production.
+    Requires truss CLI and Baseten API key configured.
+    """
+    import subprocess
+    cmd = ["truss", "push"]
+    if publish:
+        cmd.append("--publish")
+    cmd.append(truss_dir)
+    print(f"Deploying model to Baseten with command: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        print("Baseten deployment failed:")
+        print(result.stderr)
+        return False
+    print("Model deployed to Baseten successfully.")
+    return True
+
 def main():
     """Run the complete PrivAds pipeline."""
     print("\n" + "="*60)
@@ -128,6 +148,10 @@ def main():
         print("  - python pipeline/load_databases.py")
         print("  - cd backend && python main.py")
         sys.exit(1)
+
+    # Deploy trained model to Baseten
+    truss_dir = "path/to/your/truss_model"  # Update with your actual Truss directory
+    deploy_to_baseten(truss_dir, publish=True)
 
 if __name__ == "__main__":
     main()

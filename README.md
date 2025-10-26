@@ -4,7 +4,7 @@
 
 ## Overview
 
-Aura uses a **3-part AI system** to understand user preferences privately (`PrivAds`), predict real-time user receptiveness (on-device), and understand page context (on-device) to serve hyper-personalized ads. The backend provides APIs for ad serving, search, and analytics while maintaining strict privacy principles.
+PrivAds uses a **3-part AI system** to understand user preferences privately (`PrivAds`), predict real-time user receptiveness (on-device), and understand page context (on-device) to serve hyper-personalized ads. The backend provides APIs for ad serving, search, and analytics while maintaining strict privacy principles.
 
 ### Core Features
 - **Privacy-First Preference Matching**: Learns user preferences from co-click data only
@@ -83,7 +83,7 @@ curl -X POST http://localhost:8000/search_ads \
 ## Project Structure
 
 ```
-aura/
+privads/
 ├── backend/                    # FastAPI backend
 │   ├── main.py                # API endpoints (/get_ad, /search_ads)
 │   ├── privads_core.py        # PrivAds logic + Chroma interface
@@ -177,7 +177,7 @@ Natural language search over ad metadata.
 ```bash
 # Clone and setup
 git clone <repo>
-cd aura
+cd privads
 pip install -r requirements.txt
 
 # Set environment variables
