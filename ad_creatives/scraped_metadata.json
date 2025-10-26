@@ -1,40 +1,15 @@
 {
-  "ads": [
-    {
-      "id": "mock_ad_001",
-      "description": "Sustainable children's clothing, eco-friendly",
-      "source_url": "https://example.com/kids-clothing"
-    },
-    {
-      "id": "mock_ad_002",
-      "description": "Luxury watch, premium quality, expensive",
-      "source_url": "https://example.com/watches"
-    },
-    {
-      "id": "mock_ad_003",
-      "description": "Affordable kids toys, colorful, fun",
-      "source_url": "https://example.com/toys"
-    },
-    {
-      "id": "mock_ad_004",
-      "description": "Organic food delivery, healthy meals",
-      "source_url": "https://example.com/food-delivery"
-    },
-    {
-      "id": "mock_ad_005",
-      "description": "Gaming laptop, high performance",
-      "source_url": "https://example.com/laptops"
-    }
-  ],
+  "ads": [],
   "metadata": {
-    "total_scraped": 5,
+    "total_scraped": 0,
     "sources": [
-      "https://www.nytimes.com",
-      "https://www.cnn.com",
-      "https://www.foxnews.com",
-      "https://www.bbc.com",
-      "https://www.reuters.com"
+      "https://www.amazon.com/s?k=sustainable+clothing",
+      "https://www.amazon.com/s?k=luxury+watches",
+      "https://www.amazon.com/s?k=kids+toys",
+      "https://www.amazon.com/s?k=organic+food",
+      "https://www.amazon.com/s?k=gaming+laptops"
     ],
-    "mock_data": true
+    "mock_data": false,
+    "error": "No HuggingFace parquet file found"
   }
 }

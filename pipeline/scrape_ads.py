@@ -3,6 +3,12 @@ Ad Scraping Pipeline for Project Aura
 Uses Bright Data to scrape ad creatives from target websites.
 """
 
+"""
+YOU MUST DOWNLOAD THE HUGGING FACE FIRST HALF OF THE DATASET ON YOUR OWN COMPUTER
+https://huggingface.co/datasets/PeterBrendan/AdImageNet/tree/main/data
+ONLY DOWNLOAD THE FIRST ONE, not both.
+"""
+
 import os
 import requests
 from pathlib import Path
@@ -10,9 +16,14 @@ from typing import List, Dict, Any
 import json
 import time
 from dotenv import load_dotenv
+import pandas as pd
+import random
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configuration for ad image extraction
+MAX_AD_IMAGES = 100  # Maximum number of images to extract from HuggingFace dataset
 
 import os
 import requests
@@ -54,7 +65,7 @@ class BrightDataScraper:
             Metadata about scraped ads
         """
         if not self.api_key:
-            print("❌ Bright Data API key required for scraping")
+            print("Bright Data API key required for scraping")
             return self._create_mock_data(target_urls, output_dir)
 
         output_path = Path(output_dir)
@@ -275,60 +286,203 @@ class BrightDataScraper:
 
         return None
 
+    def _extract_images_from_parquet(self, parquet_path: str, output_path: Path, max_images: int = MAX_AD_IMAGES) -> List[Dict[str, Any]]:
+        """
+        Extract images from HuggingFace adImageNet parquet file.
+        
+        Args:
+            parquet_path: Path to the parquet file
+            output_path: Directory to save extracted images
+            max_images: Maximum number of images to extract
+            
+        Returns:
+            List of ad data dictionaries
+        """
+        try:
+            print(f"📊 Loading HuggingFace adImageNet dataset from {parquet_path}")
+            df = pd.read_parquet(parquet_path)
+            
+            print(f"📈 Dataset loaded: {len(df)} total images available")
+            
+            # Sample random images up to max_images
+            sample_size = min(max_images, len(df))
+            sampled_df = df.sample(n=sample_size, random_state=42)
+            
+            print(f"🎯 Extracting {sample_size} random images...")
+            
+            extracted_ads = []
+            
+            for idx, row in sampled_df.iterrows():
+                try:
+                    # Generate unique ad ID
+                    ad_id = f"hf_ad_{idx:06d}"
+                    
+                    # Extract image data (HuggingFace datasets store images as dict with 'bytes' key)
+                    if 'image' in row and row['image'] is not None:
+                        image_data = row['image']
+                        
+                        # Handle HuggingFace dataset format: {'bytes': b'...', 'path': '...'}
+                        if isinstance(image_data, dict) and 'bytes' in image_data:
+                            image_bytes = image_data['bytes']
+                            image_path = output_path / f"{ad_id}.jpg"
+                            with open(image_path, 'wb') as f:
+                                f.write(image_bytes)
+                        # If it's a PIL Image, save it directly
+                        elif hasattr(image_data, 'save'):
+                            image_path = output_path / f"{ad_id}.jpg"
+                            image_data.save(image_path, 'JPEG')
+                        # If it's bytes data, write it directly
+                        elif isinstance(image_data, bytes):
+                            image_path = output_path / f"{ad_id}.jpg"
+                            with open(image_path, 'wb') as f:
+                                f.write(image_data)
+                        else:
+                            print(f"⚠️ Unknown image format for ad {ad_id}: {type(image_data)}, skipping")
+                            continue
+                        
+                        # Extract description/caption if available
+                        description = ""
+                        if 'text' in row and pd.notna(row['text']):
+                            description = str(row['text'])
+                        elif 'caption' in row and pd.notna(row['caption']):
+                            description = str(row['caption'])
+                        elif 'description' in row and pd.notna(row['description']):
+                            description = str(row['description'])
+                        else:
+                            description = f"Ad image from HuggingFace dataset (ID: {idx})"
+                        
+                        # Create ad data
+                        ad_data = {
+                            'id': ad_id,
+                            'description': description,
+                            'source_url': f"huggingface_dataset_row_{idx}",
+                            'local_path': str(image_path),
+                            'dataset_source': 'huggingface_adimagenet'
+                        }
+                        
+                        extracted_ads.append(ad_data)
+                        
+                    else:
+                        print(f"⚠️ No image data found for row {idx}, skipping")
+                        
+                except Exception as e:
+                    print(f"⚠️ Error processing row {idx}: {e}")
+                    continue
+            
+            print(f"✅ Successfully extracted {len(extracted_ads)} images from HuggingFace dataset")
+            return extracted_ads
+            
+        except FileNotFoundError:
+            print(f"❌ Parquet file not found: {parquet_path}")
+            return []
+        except Exception as e:
+            print(f"❌ Error reading parquet file: {e}")
+            return []
+
     def _create_mock_data(self, target_urls: List[str], output_dir: str) -> Dict[str, Any]:
-        """Create mock data when Bright Data is not available."""
-        print("🔧 Creating mock ad data (Bright Data not configured)")
+        """Create mock data when Bright Data is not available. Uses the ads from hugging face"""
+        print("🔧 setting up the hugging face ads (100) if (Bright Data not configured)")
 
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
 
-        mock_ads = [
-            {
-                'id': 'mock_ad_001',
-                'description': 'Sustainable children\'s clothing, eco-friendly',
-                'source_url': 'https://example.com/kids-clothing'
-            },
-            {
-                'id': 'mock_ad_002',
-                'description': 'Luxury watch, premium quality, expensive',
-                'source_url': 'https://example.com/watches'
-            },
-            {
-                'id': 'mock_ad_003',
-                'description': 'Affordable kids toys, colorful, fun',
-                'source_url': 'https://example.com/toys'
-            },
-            {
-                'id': 'mock_ad_004',
-                'description': 'Organic food delivery, healthy meals',
-                'source_url': 'https://example.com/food-delivery'
-            },
-            {
-                'id': 'mock_ad_005',
-                'description': 'Gaming laptop, high performance',
-                'source_url': 'https://example.com/laptops'
+        # Try to extract images from HuggingFace parquet file first
+        parquet_path = "huggingFaceAdImageNet.parquet"
+        if os.path.exists(parquet_path):
+            print("Found HuggingFace adImageNet parquet file, extracting real ad images...")
+            extracted_ads = self._extract_images_from_parquet(parquet_path, output_path, MAX_AD_IMAGES)
+            
+            if extracted_ads:
+                metadata = {
+                    'ads': extracted_ads,
+                    'metadata': {
+                        'total_scraped': len(extracted_ads),
+                        'sources': target_urls,
+                        'mock_data': False,
+                        'data_source': 'huggingface_adimagenet'
+                    }
+                }
+                
+                metadata_file = output_path / "scraped_metadata.json"
+                with open(metadata_file, 'w') as f:
+                    json.dump(metadata, f, indent=2)
+                
+                return metadata
+            else:
+                print("Failed to extract images from parquet file")
+                print("No ad images available - please check the parquet file format")
+                return {
+                    'ads': [],
+                    'metadata': {
+                        'total_scraped': 0,
+                        'sources': target_urls,
+                        'mock_data': False,
+                        'error': 'Failed to extract images from parquet file'
+                    }
+                }
+        else:
+            print(f"HuggingFace parquet file not found at {parquet_path}")
+            print("No ad images available - please ensure huggingFaceAdImageNet.parquet is in the project root")
+            return {
+                'ads': [],
+                'metadata': {
+                    'total_scraped': 0,
+                    'sources': target_urls,
+                    'mock_data': False,
+                    'error': 'No HuggingFace parquet file found'
+                }
             }
-        ]
 
-        # Create placeholder images
-        for ad in mock_ads:
-            ad_path = output_path / f"{ad['id']}.jpg"
-            self._create_placeholder_image(ad_path, ad['id'])
-
-        metadata = {
-            'ads': mock_ads,
-            'metadata': {
-                'total_scraped': len(mock_ads),
-                'sources': target_urls,
-                'mock_data': True
-            }
-        }
-
-        metadata_file = output_path / "scraped_metadata.json"
-        with open(metadata_file, 'w') as f:
-            json.dump(metadata, f, indent=2)
-
-        return metadata
+        # Commented out: Original mock data creation with placeholder images
+        # Since we're now using HuggingFace images, this fallback is no longer needed
+        # 
+        # mock_ads = [
+        #     {
+        #         'id': 'mock_ad_001',
+        #         'description': 'Sustainable children\'s clothing, eco-friendly',
+        #         'source_url': 'https://example.com/kids-clothing'
+        #     },
+        #     {
+        #         'id': 'mock_ad_002',
+        #         'description': 'Luxury watch, premium quality, expensive',
+        #         'source_url': 'https://example.com/watches'
+        #     },
+        #     {
+        #         'id': 'mock_ad_003',
+        #         'description': 'Affordable kids toys, colorful, fun',
+        #         'source_url': 'https://example.com/toys'
+        #     },
+        #     {
+        #         'id': 'mock_ad_004',
+        #         'description': 'Organic food delivery, healthy meals',
+        #         'source_url': 'https://example.com/food-delivery'
+        #     },
+        #     {
+        #         'id': 'mock_ad_005',
+        #         'description': 'Gaming laptop, high performance',
+        #         'source_url': 'https://example.com/laptops'
+        #     }
+        # ]
+        #
+        # # Create placeholder images
+        # for ad in mock_ads:
+        #     ad_path = output_path / f"{ad['id']}.jpg"
+        #     self._create_placeholder_image(ad_path, ad['id'])
+        #
+        # metadata = {
+        #     'ads': mock_ads,
+        #     'metadata': {
+        #         'total_scraped': len(mock_ads),
+        #         'sources': target_urls,
+        #         'mock_data': True
+        #     }
+        # }
+        #
+        # metadata_file = output_path / "scraped_metadata.json"
+        # with open(metadata_file, 'w') as f:
+        #     json.dump(metadata, f, indent=2)
+        #
+        # return metadata
 
     def _create_placeholder_image(self, path: Path, text: str):
         """Create a simple placeholder image."""
@@ -355,7 +509,16 @@ class BrightDataScraper:
             print(f"⚠ Failed to create placeholder image: {e}")
 
 def main():
-    """Main scraping execution."""
+    """
+    Main scraping execution.
+    
+    This script will:
+    1. Try to scrape ads using Bright Data API if configured
+    2. If Bright Data is not available, extract images from HuggingFace adImageNet parquet file
+    3. If parquet file is not found, create placeholder mock images
+    
+    The number of images extracted from the parquet file is controlled by MAX_AD_IMAGES variable.
+    """
     print("=" * 60)
     print("Project Aura: Ad Scraping Pipeline")
     print("=" * 60)
