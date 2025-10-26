@@ -87,7 +87,7 @@ class SyntheticInteractionGenerator:
 
     def __init__(self, random_seed: int = 42):
         np.random.seed(random_seed)
-        self.base_ad_click_prob = 0.001  # 0.1% base probability
+        self.base_ad_click_prob = 0.01  # 1% base probability (increase from 0.1%)
 
     def sample_beta(self, params: Dict[str, float]) -> float:
         """Sample from Beta distribution"""

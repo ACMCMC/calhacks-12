@@ -43,9 +43,14 @@ class ONNXExporter:
         print(f"✓ Using {len(self.feature_names)} minimal robust features")
 
     def create_simplified_model(self):
-        """Create a simplified model without polynomial features for better browser performance"""
+        """Create a simplified model for browser deployment"""
         print("Creating simplified model for browser deployment...")
 
+        # If the model is a pipeline with RandomForest, just return it
+        if 'classifier' in self.model.named_steps and hasattr(self.model.named_steps['classifier'], 'feature_importances_'):
+            return self.model
+
+        # Otherwise, fallback to logistic regression logic (if needed)
         # Extract just the logistic regression (remove polynomial features)
         # This will make the model smaller and faster in the browser
         lr_model = self.model.named_steps['classifier']
