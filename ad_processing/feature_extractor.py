@@ -11,6 +11,10 @@ import PIL.Image
 import io
 from transformers import pipeline
 
+
+import requests
+
+
 class AdFeatureExtractor:
     """Extracts features and metadata from ad creatives."""
 
@@ -18,13 +22,14 @@ class AdFeatureExtractor:
         # Initialize sentiment analysis pipeline
         self.sentiment_analyzer = pipeline(
             "sentiment-analysis",
-            model="cardiffnlp/twitter-roberta-base-sentiment-latest"
+            model="cardiffnlp/twitter-roberta-base-sentiment-latest",
         )
 
         # Initialize OCR (if available)
         try:
             import easyocr
-            self.reader = easyocr.Reader(['en'])
+
+            self.reader = easyocr.Reader(["en"])
             self.has_ocr = True
         except ImportError:
             print("⚠ EasyOCR not available, OCR features disabled")
@@ -34,19 +39,21 @@ class AdFeatureExtractor:
         self,
         image_path: Optional[str] = None,
         image: Optional[PIL.Image.Image] = None,
-        text_content: Optional[str] = None
+        text_content: Optional[str] = None,
+        use_reka_vision: bool = True,
     ) -> Dict[str, Any]:
         """
         Extract comprehensive features from ad creative.
-
         Args:
             image_path: Path to image file
             image: PIL Image object
             text_content: Extracted text content (from OCR or provided)
-
+            use_reka_vision: Whether to use Reka Vision API for metadata tagging
         Returns:
             Dictionary of extracted features
         """
+        import os
+
         features = {}
 
         # Load image
@@ -55,6 +62,32 @@ class AdFeatureExtractor:
         elif not image:
             # No image provided
             return self._extract_text_only_features(text_content or "")
+
+        # --- Reka Vision metadata tagging ---
+        if use_reka_vision and image_path:
+            try:
+                reka_api_key = os.getenv("REKA_API_KEY")
+                if reka_api_key:
+                    with open(image_path, "rb") as f:
+                        files = {"video": (Path(image_path).name, f, "image/jpeg")}
+                        headers = {"X-Api-Key": reka_api_key}
+                        url = "https://vision-agent.api.reka.ai/qa/quicktag"
+                        resp = requests.post(
+                            url, files=files, headers=headers, timeout=20
+                        )
+                        if resp.ok:
+                            vision_data = resp.json()
+                            features["reka_vision_tags"] = vision_data.get("tags", [])
+                            features["reka_vision_objects"] = vision_data.get(
+                                "objects", []
+                            )
+                            features["reka_vision_raw"] = vision_data
+                        else:
+                            features["reka_vision_error"] = f"HTTP {resp.status_code}"
+                else:
+                    features["reka_vision_error"] = "No REKA_API_KEY in env"
+            except Exception as e:
+                features["reka_vision_error"] = str(e)
 
         # Convert to numpy array for OpenCV
         img_array = np.array(image)
@@ -67,7 +100,7 @@ class AdFeatureExtractor:
             ocr_text = self._extract_text_ocr(img_array)
             if ocr_text:
                 text_content = ocr_text
-                features['ocr_text'] = ocr_text
+                features["ocr_text"] = ocr_text
 
         # Text-based features
         if text_content:
@@ -80,25 +113,25 @@ class AdFeatureExtractor:
         features = {}
 
         # Color analysis
-        features['dominant_color'] = self._get_dominant_color(img_array)
+        features["dominant_color"] = self._get_dominant_color(img_array)
 
         # Brightness
         gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
-        features['brightness'] = float(np.mean(gray) / 255.0)
+        features["brightness"] = float(np.mean(gray) / 255.0)
 
         # Contrast
-        features['contrast'] = float(gray.std() / 255.0)
+        features["contrast"] = float(gray.std() / 255.0)
 
         # Motion/activity (for videos, but can work on images too)
-        features['avg_motion'] = self._calculate_motion(gray)
+        features["avg_motion"] = self._calculate_motion(gray)
 
         # Has call-to-action elements (simple heuristic)
-        features['has_cta'] = self._detect_cta(img_array)
+        features["has_cta"] = self._detect_cta(img_array)
 
         # Image dimensions
         h, w = img_array.shape[:2]
-        features['aspect_ratio'] = float(w / h)
-        features['resolution'] = f"{w}x{h}"
+        features["aspect_ratio"] = float(w / h)
+        features["resolution"] = f"{w}x{h}"
 
         return features
 
@@ -121,50 +154,59 @@ class AdFeatureExtractor:
 
         # Sentiment analysis
         try:
-            sentiment_result = self.sentiment_analyzer(text[:512])[0]  # Limit text length
-            features['sentiment'] = sentiment_result['label'].lower()
-            features['sentiment_score'] = float(sentiment_result['score'])
+            sentiment_result = self.sentiment_analyzer(text[:512])[
+                0
+            ]  # Limit text length
+            features["sentiment"] = sentiment_result["label"].lower()
+            features["sentiment_score"] = float(sentiment_result["score"])
         except Exception as e:
             print(f"Sentiment analysis failed: {e}")
-            features['sentiment'] = 'neutral'
-            features['sentiment_score'] = 0.5
+            features["sentiment"] = "neutral"
+            features["sentiment_score"] = 0.5
 
         # Text statistics
-        features['text_length'] = len(text)
-        features['word_count'] = len(text.split())
+        features["text_length"] = len(text)
+        features["word_count"] = len(text.split())
 
         # Hashtags, mentions, etc.
-        features['has_hashtag'] = '#' in text
-        features['has_mention'] = '@' in text
-        features['has_url'] = 'http' in text.lower()
+        features["has_hashtag"] = "#" in text
+        features["has_mention"] = "@" in text
+        features["has_url"] = "http" in text.lower()
 
         # Keywords extraction (simple)
-        features['keywords'] = self._extract_keywords(text)
+        features["keywords"] = self._extract_keywords(text)
 
         return features
 
     def _extract_text_only_features(self, text: str) -> Dict[str, Any]:
         """Extract features when only text is available."""
         features = self._extract_text_features(text)
-        features.update({
-            'has_image': False,
-            'dominant_color': 'unknown',
-            'brightness': 0.5,
-            'contrast': 0.5,
-            'avg_motion': 0.0,
-            'has_cta': False,
-            'aspect_ratio': 1.0,
-            'resolution': 'text_only'
-        })
+        features.update(
+            {
+                "has_image": False,
+                "dominant_color": "unknown",
+                "brightness": 0.5,
+                "contrast": 0.5,
+                "avg_motion": 0.0,
+                "has_cta": False,
+                "aspect_ratio": 1.0,
+                "resolution": "text_only",
+            }
+        )
         return features
 
     def _get_dominant_color(self, img_array: np.ndarray) -> str:
         """Get dominant color using k-means clustering."""
         try:
             pixels = img_array.reshape(-1, 3)
-            pixels = pixels[np.random.choice(pixels.shape[0], min(1000, pixels.shape[0]), replace=False)]
+            pixels = pixels[
+                np.random.choice(
+                    pixels.shape[0], min(1000, pixels.shape[0]), replace=False
+                )
+            ]
 
             from sklearn.cluster import KMeans
+
             kmeans = KMeans(n_clusters=3, n_init=10)
             kmeans.fit(pixels)
 
@@ -197,27 +239,50 @@ class AdFeatureExtractor:
     def _extract_keywords(self, text: str) -> list:
         """Simple keyword extraction."""
         # Remove common stop words and get meaningful words
-        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'}
+        stop_words = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "in",
+            "on",
+            "at",
+            "to",
+            "for",
+            "of",
+            "with",
+            "by",
+        }
         words = text.lower().split()
-        keywords = [word.strip('.,!?') for word in words if len(word) > 3 and word not in stop_words]
+        keywords = [
+            word.strip(".,!?")
+            for word in words
+            if len(word) > 3 and word not in stop_words
+        ]
         return list(set(keywords))[:10]  # Return up to 10 unique keywords
 
+
 # Convenience function
-def extract_ad_features(image_path=None, image=None, text_content=None) -> Dict[str, Any]:
+def extract_ad_features(
+    image_path=None, image=None, text_content=None
+) -> Dict[str, Any]:
     """Convenience function to extract features from an ad."""
     extractor = AdFeatureExtractor()
     return extractor.extract_features(
-        image_path=image_path,
-        image=image,
-        text_content=text_content
+        image_path=image_path, image=image, text_content=text_content
     )
+
 
 if __name__ == "__main__":
     # Test feature extraction
     extractor = AdFeatureExtractor()
 
     # Test with text only
-    features = extractor.extract_features(text_content="Buy now! Amazing deals on luxury watches!")
+    features = extractor.extract_features(
+        text_content="Buy now! Amazing deals on luxury watches!"
+    )
     print("Text-only features:", features)
 
     # Test with dummy image features (would need actual image)

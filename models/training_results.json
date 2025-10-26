@@ -1,124 +1,124 @@
 {
   "cv_results": {
     "cv_auc_scores": [
-      0.7780454969972099,
-      0.7692531924279554,
-      0.7675712790149319,
-      0.7568452259493397,
-      0.7724773717862763
+      0.6965805691930274,
+      0.7546859860339239,
+      0.7460323647662853,
+      0.7993571359128913,
+      0.7416077273316483
     ],
-    "cv_auc_mean": 0.7688385132351427,
-    "cv_auc_std": 0.006980352754291966
+    "cv_auc_mean": 0.7476527566475553,
+    "cv_auc_std": 0.03277299355104591
   },
   "train_results": {
-    "train_auc": 0.7702376314165972,
-    "test_auc": 0.76683712018156,
+    "train_auc": 1.0,
+    "test_auc": 0.8648037469663726,
     "confusion_matrix": [
       [
-        7541,
-        3555
+        933,
+        178
       ],
       [
-        2617,
-        6287
+        251,
+        638
       ]
     ],
     "classification_report": {
       "0": {
-        "precision": 0.7423705453829494,
-        "recall": 0.6796142754145638,
-        "f1-score": 0.7096076032746778,
-        "support": 11096.0
+        "precision": 0.7880067567567568,
+        "recall": 0.8397839783978398,
+        "f1-score": 0.8130718954248366,
+        "support": 1111.0
       },
       "1": {
-        "precision": 0.6387929282666125,
-        "recall": 0.7060871518418689,
-        "f1-score": 0.6707564280379814,
-        "support": 8904.0
+        "precision": 0.7818627450980392,
+        "recall": 0.7176602924634421,
+        "f1-score": 0.7483870967741936,
+        "support": 889.0
       },
-      "accuracy": 0.6914,
+      "accuracy": 0.7855,
       "macro avg": {
-        "precision": 0.690581736824781,
-        "recall": 0.6928507136282163,
-        "f1-score": 0.6901820156563296,
-        "support": 20000.0
+        "precision": 0.7849347509273981,
+        "recall": 0.778722135430641,
+        "f1-score": 0.780729496099515,
+        "support": 2000.0
       },
       "weighted avg": {
-        "precision": 0.6962577902427561,
-        "recall": 0.6914,
-        "f1-score": 0.6923110600593005,
-        "support": 20000.0
+        "precision": 0.7852757435744567,
+        "recall": 0.7855,
+        "f1-score": 0.7843195024246259,
+        "support": 2000.0
       }
     }
   },
   "feature_importance": {
     "top_features": [
       [
-        "interaction_density",
-        1.143866325094752
-      ],
-      [
         "action_entropy",
-        1.105066840086642
-      ],
-      [
-        "scroll_down_count",
-        0.7339351583269835
-      ],
-      [
-        "scroll_up_count",
-        0.5027047371788748
-      ],
-      [
-        "session_duration",
-        0.2420775943259434
-      ],
-      [
-        "attention_score",
-        0.21772954845679496
-      ],
-      [
-        "scroll_velocity_avg",
-        0.21378135860073696
-      ],
-      [
-        "scroll_depth_max",
-        0.18633433270211167
-      ],
-      [
-        "burstiness_score",
-        0.09250340036718681
+        0.17521323073433892
       ],
       [
         "avg_time_between_actions",
-        0.06803623471446453
+        0.11123720381990447
+      ],
+      [
+        "scroll_velocity_avg",
+        0.10811404614026443
+      ],
+      [
+        "burstiness_score",
+        0.10112518911026838
+      ],
+      [
+        "session_duration",
+        0.0876716787175208
+      ],
+      [
+        "interaction_density",
+        0.07690846969706218
       ],
       [
         "time_since_last_action",
-        0.0052754550950888865
+        0.075414930389403
+      ],
+      [
+        "scroll_depth_max",
+        0.07416829212146803
+      ],
+      [
+        "scroll_down_count",
+        0.05581396302514986
+      ],
+      [
+        "scroll_up_count",
+        0.0554165759796515
       ],
       [
         "engagement_rhythm",
-        0.0024793572525353123
+        0.0456035267639877
+      ],
+      [
+        "attention_score",
+        0.03331289350098077
       ]
     ],
     "all_importances": {
-      "time_since_last_action": 0.0052754550950888865,
-      "avg_time_between_actions": 0.06803623471446453,
-      "session_duration": 0.2420775943259434,
-      "scroll_down_count": 0.7339351583269835,
-      "scroll_up_count": 0.5027047371788748,
-      "scroll_depth_max": 0.18633433270211167,
-      "interaction_density": 1.143866325094752,
-      "attention_score": 0.21772954845679496,
-      "scroll_velocity_avg": 0.21378135860073696,
-      "action_entropy": 1.105066840086642,
-      "burstiness_score": 0.09250340036718681,
-      "engagement_rhythm": 0.0024793572525353123
+      "time_since_last_action": 0.075414930389403,
+      "avg_time_between_actions": 0.11123720381990447,
+      "session_duration": 0.0876716787175208,
+      "scroll_down_count": 0.05581396302514986,
+      "scroll_up_count": 0.0554165759796515,
+      "scroll_depth_max": 0.07416829212146803,
+      "interaction_density": 0.07690846969706218,
+      "attention_score": 0.03331289350098077,
+      "scroll_velocity_avg": 0.10811404614026443,
+      "action_entropy": 0.17521323073433892,
+      "burstiness_score": 0.10112518911026838,
+      "engagement_rhythm": 0.0456035267639877
     }
   },
-  "n_samples": 100000,
-  "positive_ratio": 0.4452,
+  "n_samples": 10000,
+  "positive_ratio": 0.4443,
   "model_path": "/home/acreomarino/privads/models/interaction_predictor.pkl",
   "scaler_path": "/home/acreomarino/privads/models/interaction_scaler.pkl"
 }
